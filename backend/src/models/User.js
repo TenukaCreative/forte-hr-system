@@ -7,6 +7,7 @@ module.exports = (sequelize) => {
       primaryKey: true,
       defaultValue: DataTypes.UUIDV4,
     },
+    // Will be enforced NOT NULL once Azure AD integration is live
     azureId: {
       type: DataTypes.STRING,
       unique: true,
@@ -21,22 +22,14 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    role: {
-      type: DataTypes.ENUM(
-        'IT_ADMIN',
-        'HR_MANAGER',
-        'HEAD_PMO',
-        'PROJECT_MANAGER',
-        'BUSINESS_ANALYST'
-      ),
-      allowNull: false,
-    },
     isActive: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
-    lastLogin: {
-      type: DataTypes.DATE,
+    // DEV ONLY — role comes from AD token in production,
+    // remove this field when AD integration is complete
+    role: {
+      type: DataTypes.ENUM('IT', 'HR_MANAGER', 'HEAD_OF_PMO', 'PM', 'BA'),
       allowNull: true,
     },
   }, {

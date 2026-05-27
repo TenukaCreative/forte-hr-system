@@ -1,0 +1,341 @@
+/* ── Page wrapper ── */
+.login-page {
+  min-height: 100svh;
+  background: #FAFAF7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* ── Card ── */
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.06),
+    0 8px 28px rgba(0, 0, 0, 0.06);
+  padding: 40px;
+}
+
+/* ── Logo ── */
+.login-logo {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.login-logo-mark {
+  font-family: 'DM Serif Display', serif;
+  font-size: 42px;
+  color: #15161A;
+  line-height: 1;
+  letter-spacing: -1px;
+}
+
+.logo-dot {
+  color: #C8203D;
+}
+
+.login-logo-name {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #15161A;
+  text-transform: lowercase;
+}
+
+/* ── Headings ── */
+.login-heading {
+  font-family: 'DM Serif Display', serif;
+  font-size: 30px;
+  font-weight: 400;
+  color: #15161A;
+  margin: 0 0 6px;
+  line-height: 1.1;
+  letter-spacing: -0.3px;
+  text-align: center;
+}
+
+.login-subheading {
+  font-size: 14px;
+  color: rgba(21, 22, 26, 0.5);
+  margin: 0 0 24px;
+  text-align: center;
+}
+
+/* ── Error banner ── */
+.error-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 14px;
+  background: rgba(200, 32, 61, 0.07);
+  border: 1px solid rgba(200, 32, 61, 0.22);
+  border-radius: 10px;
+  margin-bottom: 18px;
+  font-size: 13.5px;
+  color: #C8203D;
+  line-height: 1.45;
+}
+
+.error-banner svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ── Microsoft SSO button ── */
+.btn-sso {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 11px 20px;
+  border: 1.5px solid #DEDED8;
+  border-radius: 10px;
+  background: #fff;
+  color: #15161A;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.18s, box-shadow 0.18s;
+  margin-bottom: 20px;
+}
+
+.btn-sso:hover {
+  border-color: #15161A;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.btn-sso:active {
+  background: #F5F5F0;
+}
+
+/* ── Divider ── */
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  color: rgba(21, 22, 26, 0.32);
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #E2E2DC;
+}
+
+/* ── Form fields ── */
+.form-field {
+  margin-bottom: 15px;
+}
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #15161A;
+  margin-bottom: 6px;
+  letter-spacing: 0.01em;
+}
+
+.dev-badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(200, 32, 61, 0.7);
+  background: rgba(200, 32, 61, 0.08);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid #DEDED8;
+  border-radius: 10px;
+  background: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  color: #15161A;
+  outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+
+.form-input::placeholder {
+  color: rgba(21, 22, 26, 0.3);
+}
+
+.form-input:focus {
+  border-color: #C8203D;
+  box-shadow: 0 0 0 3px rgba(200, 32, 61, 0.1);
+}
+
+/* ── Password field ── */
+.password-wrap {
+  position: relative;
+}
+
+.password-wrap .form-input {
+  padding-right: 46px;
+}
+
+.btn-eye {
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: rgba(21, 22, 26, 0.35);
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+
+.btn-eye:hover {
+  color: #15161A;
+}
+
+/* ── Role select ── */
+.form-select {
+  width: 100%;
+  padding: 11px 38px 11px 14px;
+  border: 1.5px solid #DEDED8;
+  border-radius: 10px;
+  background: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%2315161A' stroke-opacity='0.4' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  color: #15161A;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+
+.form-select:focus {
+  border-color: #C8203D;
+  box-shadow: 0 0 0 3px rgba(200, 32, 61, 0.1);
+}
+
+/* ── Remember me row ── */
+.login-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 6px 0 20px;
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: rgba(21, 22, 26, 0.65);
+  cursor: pointer;
+  user-select: none;
+}
+
+.remember-me input[type='checkbox'] {
+  accent-color: #C8203D;
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+.forgot-link {
+  font-size: 13.5px;
+  color: #C8203D;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.forgot-link:hover {
+  text-decoration: underline;
+}
+
+/* ── Sign In button ── */
+.btn-signin {
+  width: 100%;
+  padding: 13px 20px;
+  background: #C8203D;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: background 0.18s, box-shadow 0.18s;
+  letter-spacing: 0.01em;
+}
+
+.btn-signin:hover:not(:disabled) {
+  background: #a8182f;
+  box-shadow: 0 4px 14px rgba(200, 32, 61, 0.28);
+}
+
+.btn-signin:active:not(:disabled) {
+  background: #8e1228;
+}
+
+.btn-signin:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* ── Spinner ── */
+.spinner {
+  width: 17px;
+  height: 17px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: lp-spin 0.65s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes lp-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Mobile ── */
+@media (max-width: 480px) {
+  .login-page {
+    padding: 0;
+    align-items: flex-start;
+  }
+
+  .login-card {
+    max-width: 100%;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 40px 24px 48px;
+    min-height: 100svh;
+  }
+}

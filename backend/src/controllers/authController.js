@@ -1,47 +1,60 @@
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
 
-// TODO: Replace local login with Azure AD SSO when AZURE_TENANT_ID, AZURE_CLIENT_ID,
-// and AZURE_CLIENT_SECRET are provided by Forte IT
-
-const login = async (req, res, next) => {
+// DEV ONLY — remove before production
+const devLogin = async (req, res, next) => {
   try {
-    const { email, role, name } = req.body;
+    const { email } = req.body;
 
-    if (!email || !role) {
-      return res.status(400).json({ message: 'email and role are required' });
+    const user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      return res.status(401).json({ message: 'Access denied. Contact IT.' });
     }
 
-    const [user] = await User.findOrCreate({
-      where: { email },
-      defaults: { email, role, name: name || email.split('@')[0] },
-    });
+    if (!user.isActive) {
+      return res.status(401).json({ message: 'Account deactivated.' });
+    }
 
-    user.lastLogin = new Date();
-    await user.save();
-
-    const payload = {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      name: user.name,
-    };
+    const payload = { id: user.id, email: user.email, name: user.name, role: user.role };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRES_IN || '7d',
     });
 
-    return res.json({
-      token,
-      user: { id: user.id, email: user.email, role: user.role, name: user.name },
-    });
+    return res.json({ token, user: payload });
   } catch (err) {
     next(err);
   }
 };
 
+// POST /api/auth/microsoft/callback
+// Receives the Azure AD token from the frontend after MSAL redirect.
+// Extracts email, name, and role from the AD token claims,
+// then finds or creates the user record by azureId.
+// Role is intentionally NOT stored in the DB — it comes from AD on every login.
+const microsoftCallback = async (req, res, next) => {
+  try {
+    // TODO: implement when AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET
+    // are provided by Forte IT. Steps:
+    //   1. Validate the incoming AD token with MSAL / passport-azure-ad
+    //   2. Destructure: { oid: azureId, email, name, roles } from token claims
+    //   3. const [user] = await User.findOrCreate({
+    //        where: { azureId },
+    //        defaults: { azureId, email, name, isActive: true },
+    //      });
+    //   4. If user.email changed, update it (AD is source of truth)
+    //   5. Issue JWT: { id, email, name, role } where role = roles[0] from AD
+    res.status(501).json({ message: 'Azure AD SSO not yet configured' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/auth/me
+// Role is read from the JWT — no DB call needed.
 const me = (req, res) => {
   res.json(req.user);
 };
 
-module.exports = { login, me };
+module.exports = { devLogin, microsoftCallback, me };
