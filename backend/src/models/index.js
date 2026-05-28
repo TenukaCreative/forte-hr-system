@@ -5,7 +5,9 @@ const Employee = require('./Employee')(sequelize);
 const Document = require('./Document')(sequelize);
 const LeaveRequest = require('./LeaveRequest')(sequelize);
 const LeavePlan = require('./LeavePlan')(sequelize);
-const PerformanceEval = require('./PerformanceEval')(sequelize);
+const KPI = require('./KPI')(sequelize);
+const Task = require('./Task')(sequelize);
+const Notification = require('./Notification')(sequelize);
 
 // User <-> Employee
 User.hasOne(Employee, { foreignKey: 'userId' });
@@ -25,11 +27,24 @@ LeaveRequest.belongsTo(User, { foreignKey: 'reviewedBy', as: 'reviewer' });
 Employee.hasMany(LeavePlan, { foreignKey: 'employeeId' });
 LeavePlan.belongsTo(Employee, { foreignKey: 'employeeId' });
 
-// Employee <-> PerformanceEval
-Employee.hasMany(PerformanceEval, { foreignKey: 'employeeId' });
-PerformanceEval.belongsTo(Employee, { foreignKey: 'employeeId' });
-PerformanceEval.belongsTo(User, { foreignKey: 'reviewerId', as: 'reviewer' });
-PerformanceEval.belongsTo(User, { foreignKey: 'approverId', as: 'approver' });
+// Employee <-> KPI
+Employee.hasMany(KPI, { foreignKey: 'employeeId' });
+KPI.belongsTo(Employee, { foreignKey: 'employeeId' });
+
+// User <-> KPI (assigner)
+User.hasMany(KPI, { foreignKey: 'assignedBy', as: 'assignedKPIs' });
+KPI.belongsTo(User, { foreignKey: 'assignedBy', as: 'assigner' });
+
+// KPI <-> Task
+KPI.hasMany(Task, { foreignKey: 'kpiId', as: 'tasks' });
+Task.belongsTo(KPI, { foreignKey: 'kpiId' });
+
+// User <-> Task (completedBy)
+Task.belongsTo(User, { foreignKey: 'completedBy', as: 'completedByUser' });
+
+// User <-> Notification
+User.hasMany(Notification, { foreignKey: 'userId' });
+Notification.belongsTo(User, { foreignKey: 'userId' });
 
 module.exports = {
   sequelize,
@@ -38,5 +53,7 @@ module.exports = {
   Document,
   LeaveRequest,
   LeavePlan,
-  PerformanceEval,
+  KPI,
+  Task,
+  Notification,
 };

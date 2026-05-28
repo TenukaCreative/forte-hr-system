@@ -9,10 +9,12 @@ module.exports = (sequelize) => {
     },
     employeeId: {
       type: DataTypes.UUID,
+      allowNull: false,
       references: { model: 'Employees', key: 'id' },
     },
     leaveType: {
-      type: DataTypes.ENUM('ANNUAL', 'SICK', 'CASUAL', 'MATERNITY', 'UNPAID'),
+      type: DataTypes.ENUM('PAID', 'UNPAID'),
+      allowNull: false,
     },
     startDate: {
       type: DataTypes.DATEONLY,

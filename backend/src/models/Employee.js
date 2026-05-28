@@ -22,8 +22,21 @@ module.exports = (sequelize) => {
     designation: {
       type: DataTypes.STRING,
     },
-    phone: {
+    contactNumber: {
       type: DataTypes.STRING,
+      allowNull: true,
+    },
+    address: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    emergencyContact: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    emergencyPhone: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
     profilePhoto: {
       type: DataTypes.STRING,

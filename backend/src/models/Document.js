@@ -9,10 +9,8 @@ module.exports = (sequelize) => {
     },
     employeeId: {
       type: DataTypes.UUID,
+      allowNull: false,
       references: { model: 'Employees', key: 'id' },
-    },
-    type: {
-      type: DataTypes.ENUM('CV', 'JD', 'KPI', 'OTHER'),
     },
     fileName: {
       type: DataTypes.STRING,
@@ -25,6 +23,10 @@ module.exports = (sequelize) => {
     uploadedBy: {
       type: DataTypes.UUID,
       references: { model: 'Users', key: 'id' },
+    },
+    uploadedAt: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW,
     },
   }, {
     timestamps: true,
