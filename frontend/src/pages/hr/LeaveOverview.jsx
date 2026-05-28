@@ -28,11 +28,11 @@ export default function LeaveOverview() {
   const handle = async (id, action) => {
     setActing(id + action);
     try {
-      await api.patch(`/leaves/${id}/${action}`);
-      toast.success(`Leave ${action}d`);
+      const { data } = await api.patch(`/leaves/${id}/${action}`);
+      toast.success(data.message || (action === 'approve' ? 'Leave approved' : 'Leave rejected'));
       fetchLeaves();
     } catch (err) {
-      toast.error(err.response?.data?.message || `Failed to ${action}`);
+      toast.error(err.response?.data?.message || `Failed to ${action} leave`);
     } finally { setActing(null); }
   };
 

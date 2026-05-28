@@ -87,8 +87,11 @@ const approveLeave = async (req, res, next) => {
       });
     }
 
-    res.json(leave);
-  } catch (err) { next(err); }
+    res.json({ message: 'Leave approved successfully', leave });
+  } catch (err) {
+    console.error('Approve leave error:', err);
+    res.status(500).json({ message: err.message });
+  }
 };
 
 const rejectLeave = async (req, res, next) => {
@@ -108,8 +111,11 @@ const rejectLeave = async (req, res, next) => {
       });
     }
 
-    res.json(leave);
-  } catch (err) { next(err); }
+    res.json({ message: 'Leave rejected successfully', leave });
+  } catch (err) {
+    console.error('Reject leave error:', err);
+    res.status(500).json({ message: err.message });
+  }
 };
 
 module.exports = { requestLeave, getMyLeaves, getAllLeaves, approveLeave, rejectLeave };
