@@ -78,7 +78,7 @@ const approveLeave = async (req, res, next) => {
     if (!leave) return res.status(404).json({ message: 'Leave request not found' });
     if (leave.status !== 'PENDING') return res.status(400).json({ message: 'Can only approve pending requests' });
 
-    await leave.update({ status: 'APPROVED', reviewedBy: req.user.id, reviewNote: req.body.note || null });
+    await leave.update({ status: 'APPROVED', reviewedBy: req.user.id, reviewNote: req.body?.note || null });
 
     if (leave.Employee?.User?.id) {
       await Notification.create({
@@ -102,7 +102,7 @@ const rejectLeave = async (req, res, next) => {
     if (!leave) return res.status(404).json({ message: 'Leave request not found' });
     if (leave.status !== 'PENDING') return res.status(400).json({ message: 'Can only reject pending requests' });
 
-    await leave.update({ status: 'REJECTED', reviewedBy: req.user.id, reviewNote: req.body.note || null });
+    await leave.update({ status: 'REJECTED', reviewedBy: req.user.id, reviewNote: req.body?.note || null });
 
     if (leave.Employee?.User?.id) {
       await Notification.create({
