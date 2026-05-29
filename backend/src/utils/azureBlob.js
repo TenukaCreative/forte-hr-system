@@ -36,13 +36,27 @@ const deleteFromBlob = async (fileUrl) => {
   const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME;
   const client = getClient();
 
-  // Dev placeholder URLs — nothing to delete
-  if (!client || !containerName || fileUrl.startsWith('http://dev-placeholder')) return;
+  if (!client || !containerName || !fileUrl || fileUrl.startsWith('http://dev-placeholder')) {
+    console.log('Skipping blob delete:', fileUrl);
+    return;
+  }
 
-  const url = new URL(fileUrl);
-  const blobName = url.pathname.replace(`/${containerName}/`, '').replace(/^\//, '');
-  const containerClient = client.getContainerClient(containerName);
-  await containerClient.getBlockBlobClient(blobName).delete();
+  try {
+    const url = new URL(fileUrl);
+    const blobName = decodeURIComponent(
+      url.pathname.replace(`/${containerName}/`, '').replace(/^\//, '')
+    );
+
+    console.log('Deleting blob:', blobName);
+
+    const containerClient = client.getContainerClient(containerName);
+    await containerClient.getBlockBlobClient(blobName).deleteIfExists();
+
+    console.log('Blob deleted:', blobName);
+  } catch (err) {
+    console.warn('Blob delete warning:', err.message);
+    // Don't throw — let DB deletion proceed
+  }
 };
 
 const generateSasUrl = (fileUrl) => {
