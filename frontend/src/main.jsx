@@ -14,7 +14,7 @@ createRoot(document.getElementById('root')).render(
         <Toaster
           position="top-right"
           toastOptions={{
-            style: { fontFamily: 'DM Sans, sans-serif', fontSize: 14 },
+            style: { fontFamily: "'Inter', sans-serif", fontSize: 14 },
             success: { iconTheme: { primary: '#065F46', secondary: '#D1FAE5' } },
             error:   { iconTheme: { primary: '#C8203D', secondary: '#FEE2E2' } },
           }}

@@ -1,4 +1,9 @@
-const { BlobServiceClient, StorageSharedKeyCredential } = require('@azure/storage-blob');
+const {
+  BlobServiceClient,
+  StorageSharedKeyCredential,
+  generateBlobSASQueryParameters,
+  BlobSASPermissions,
+} = require('@azure/storage-blob');
 const crypto = require('crypto');
 
 const getClient = () => {
@@ -40,4 +45,36 @@ const deleteFromBlob = async (fileUrl) => {
   await containerClient.getBlockBlobClient(blobName).delete();
 };
 
-module.exports = { uploadToBlob, deleteFromBlob };
+const generateSasUrl = (fileUrl) => {
+  const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME;
+  const accountKey = process.env.AZURE_STORAGE_ACCESS_KEY;
+  const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME;
+
+  // Dev placeholder URLs — return as-is
+  if (!accountName || !accountKey || !containerName || fileUrl.startsWith('http://dev-placeholder')) {
+    return fileUrl;
+  }
+
+  const credential = new StorageSharedKeyCredential(accountName, accountKey);
+
+  const url = new URL(fileUrl);
+  const blobName = decodeURIComponent(
+    url.pathname.replace(`/${containerName}/`, '').replace(/^\//, '')
+  );
+
+  const expiresOn = new Date(Date.now() + 60 * 60 * 1000);
+
+  const sasToken = generateBlobSASQueryParameters(
+    {
+      containerName,
+      blobName,
+      permissions: BlobSASPermissions.parse('r'),
+      expiresOn,
+    },
+    credential
+  ).toString();
+
+  return `${fileUrl}?${sasToken}`;
+};
+
+module.exports = { uploadToBlob, deleteFromBlob, generateSasUrl };

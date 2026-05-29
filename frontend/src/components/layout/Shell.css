@@ -144,7 +144,7 @@
 
 /* ── Topbar ── */
 .topbar-title {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 16px;
   font-weight: 600;
   color: #15161A;
@@ -204,7 +204,7 @@
   transition: color 0.15s;
   text-decoration: none;
   font-size: 10px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 .mobile-nav-btn.active { color: #C8203D; }
 .mobile-nav-btn:hover { color: rgba(255,255,255,0.8); }

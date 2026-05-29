@@ -69,7 +69,7 @@ export default function CompanyCalendar() {
         {/* Calendar header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <button className="btn-ghost" style={{ padding: '6px 10px' }} onClick={prev}><ChevronLeft size={16} /></button>
-          <h3 style={{ margin: 0, fontFamily: "'DM Serif Display', serif", fontSize: 20, fontWeight: 400 }}>
+          <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
             {MONTHS[month]} {year}
           </h3>
           <button className="btn-ghost" style={{ padding: '6px 10px' }} onClick={next}><ChevronRight size={16} /></button>

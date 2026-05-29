@@ -1,6 +1,6 @@
 const multer = require('multer');
 const { Document } = require('../models');
-const { uploadToBlob, deleteFromBlob } = require('../utils/azureBlob');
+const { uploadToBlob, deleteFromBlob, generateSasUrl } = require('../utils/azureBlob');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -57,4 +57,17 @@ const deleteDocument = async (req, res, next) => {
   }
 };
 
-module.exports = { upload, uploadDocument, getDocuments, deleteDocument };
+const getDownloadUrl = async (req, res) => {
+  try {
+    const doc = await Document.findByPk(req.params.documentId);
+    if (!doc) return res.status(404).json({ message: 'Document not found' });
+
+    const downloadUrl = generateSasUrl(doc.fileUrl);
+    res.json({ downloadUrl });
+  } catch (err) {
+    console.error('SAS error:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { upload, uploadDocument, getDocuments, deleteDocument, getDownloadUrl };

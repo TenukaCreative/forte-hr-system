@@ -34,7 +34,7 @@ export default function EmployeeManagement() {
             <input
               type="search"
               className="search-input"
-              placeholder="Search name or email…"
+              placeholder="Search name or email"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />

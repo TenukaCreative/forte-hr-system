@@ -83,6 +83,15 @@ export default function EmployeeDetailPage() {
     finally { setUploading(false); setUploadProgress(0); }
   };
 
+  const handleDownload = async (docId) => {
+    try {
+      const { data } = await api.get(`/documents/${docId}/download`);
+      window.open(data.downloadUrl, '_blank');
+    } catch {
+      toast.error('Download failed');
+    }
+  };
+
   const handleDelete = async (docId) => {
     if (!confirm('Delete this document?')) return;
     try {
@@ -166,27 +175,47 @@ export default function EmployeeDetailPage() {
           <h3 className="section-title">Documents</h3>
 
           {/* Drop zone */}
-          <div
-            style={{
-              border: `2px dashed ${dragging ? '#C8203D' : '#E4E3DC'}`,
-              borderRadius: 10,
-              padding: '28px 20px',
-              textAlign: 'center',
-              cursor: 'pointer',
-              marginBottom: 20,
-              background: dragging ? 'rgba(200,32,61,0.03)' : '#FAFAF7',
-              transition: 'border-color 0.18s, background 0.18s',
-            }}
-            onClick={() => fileInputRef.current?.click()}
-            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e) => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files[0]; if (f) handleUpload(f); }}
-          >
-            <Upload size={22} style={{ color: 'rgba(21,22,26,0.3)', marginBottom: 8 }} />
-            <p style={{ margin: 0, fontSize: 14, color: 'rgba(21,22,26,0.6)' }}>Drag & drop or <span style={{ color: '#C8203D', fontWeight: 500 }}>click to upload</span></p>
-            <p style={{ margin: '4px 0 0', fontSize: 12, color: 'rgba(21,22,26,0.35)' }}>Any file type · Max 10 MB</p>
-            <input ref={fileInputRef} type="file" hidden onChange={(e) => { if (e.target.files[0]) handleUpload(e.target.files[0]); e.target.value = ''; }} />
-          </div>
+          {employee ? (
+            <div
+              style={{
+                border: `2px dashed ${dragging ? '#C8203D' : '#E4E3DC'}`,
+                borderRadius: 10,
+                padding: '28px 20px',
+                textAlign: 'center',
+                cursor: 'pointer',
+                marginBottom: 20,
+                background: dragging ? 'rgba(200,32,61,0.03)' : '#FAFAF7',
+                transition: 'border-color 0.18s, background 0.18s',
+              }}
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={(e) => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files[0]; if (f) handleUpload(f); }}
+            >
+              <Upload size={22} style={{ color: 'rgba(21,22,26,0.3)', marginBottom: 8 }} />
+              <p style={{ margin: 0, fontSize: 14, color: 'rgba(21,22,26,0.6)' }}>Drag & drop or <span style={{ color: '#C8203D', fontWeight: 500 }}>click to upload</span></p>
+              <p style={{ margin: '4px 0 0', fontSize: 12, color: 'rgba(21,22,26,0.35)' }}>Any file type · Max 10 MB</p>
+              <input ref={fileInputRef} type="file" hidden onChange={(e) => { if (e.target.files[0]) handleUpload(e.target.files[0]); e.target.value = ''; }} />
+            </div>
+          ) : (
+            <div
+              style={{
+                border: '2px dashed #E4E3DC',
+                borderRadius: 10,
+                padding: '28px 20px',
+                textAlign: 'center',
+                cursor: 'not-allowed',
+                marginBottom: 20,
+                background: '#F2F1EC',
+                opacity: 0.6,
+              }}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => e.preventDefault()}
+            >
+              <Upload size={22} style={{ color: 'rgba(21,22,26,0.25)', marginBottom: 8 }} />
+              <p style={{ margin: 0, fontSize: 14, color: 'rgba(21,22,26,0.5)' }}>Save employee profile first before uploading documents</p>
+            </div>
+          )}
 
           {uploading && (
             <div style={{ marginBottom: 16 }}>
@@ -215,7 +244,7 @@ export default function EmployeeDetailPage() {
                       {new Date(doc.uploadedAt).toLocaleDateString()}
                     </p>
                   </div>
-                  <a href={doc.fileUrl} target="_blank" rel="noreferrer" className="btn-ghost" style={{ padding: '4px 8px', fontSize: 12 }}>Download</a>
+                  <button className="btn-ghost" style={{ padding: '4px 8px', fontSize: 12 }} onClick={() => handleDownload(doc.id)}>Download</button>
                   <button className="btn-danger" style={{ padding: '4px 8px' }} onClick={() => handleDelete(doc.id)}>
                     <Trash2 size={13} />
                   </button>

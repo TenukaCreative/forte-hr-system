@@ -10,11 +10,11 @@ export default function DashboardPage() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontFamily: "'DM Sans', sans-serif",
+      fontFamily: "'Inter', sans-serif",
     }}>
       <div style={{ textAlign: 'center', padding: '40px 24px' }}>
         <p style={{
-          fontFamily: "'DM Serif Display', serif",
+          fontFamily: "'Inter', sans-serif",
           fontSize: '14px',
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
@@ -25,7 +25,7 @@ export default function DashboardPage() {
           Dashboard
         </p>
         <h1 style={{
-          fontFamily: "'DM Serif Display', serif",
+          fontFamily: "'Inter', sans-serif",
           fontSize: '42px',
           fontWeight: 400,
           color: '#15161A',
@@ -52,7 +52,7 @@ export default function DashboardPage() {
             color: '#15161A',
             border: '1.5px solid #DEDED8',
             borderRadius: '8px',
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: "'Inter', sans-serif",
             fontSize: '14px',
             fontWeight: 500,
             cursor: 'pointer',

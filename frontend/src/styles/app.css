@@ -16,7 +16,7 @@
   flex-wrap: wrap;
 }
 .page-header h1 {
-  font-family: 'DM Serif Display', serif;
+  font-family: 'Inter', sans-serif;
   font-size: 28px;
   font-weight: 400;
   color: #15161A;
@@ -65,7 +65,7 @@
   color: rgba(21, 22, 26, 0.25);
 }
 .stat-card-value {
-  font-family: 'DM Serif Display', serif;
+  font-family: 'Inter', sans-serif;
   font-size: 36px;
   font-weight: 400;
   color: #15161A;
@@ -88,7 +88,7 @@
   color: #fff;
   border: none;
   border-radius: 8px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -106,7 +106,7 @@
   color: #15161A;
   border: 1.5px solid #E4E3DC;
   border-radius: 8px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -123,7 +123,7 @@
   color: rgba(21,22,26,0.6);
   border: none;
   border-radius: 6px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 13px;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
@@ -139,7 +139,7 @@
   color: #C8203D;
   border: none;
   border-radius: 6px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 13px;
   cursor: pointer;
   transition: background 0.15s;
@@ -214,7 +214,7 @@
   border: 1.5px solid #E4E3DC;
   border-radius: 8px;
   background: #F5F4EF;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 14px;
   color: #15161A;
   outline: none;
@@ -243,7 +243,7 @@
   border: 1.5px solid #E4E3DC;
   border-radius: 8px;
   background: #fff;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 14px;
   color: #15161A;
   outline: none;
@@ -292,7 +292,7 @@
   border: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 14px;
   font-weight: 500;
   color: rgba(21,22,26,0.5);
@@ -304,7 +304,7 @@
 
 /* ── Section heading ── */
 .section-title {
-  font-family: 'DM Serif Display', serif;
+  font-family: 'Inter', sans-serif;
   font-size: 18px;
   font-weight: 400;
   color: #15161A;

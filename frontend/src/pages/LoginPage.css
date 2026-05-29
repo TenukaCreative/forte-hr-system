@@ -6,7 +6,7 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 /* ── Card ── */
@@ -31,7 +31,7 @@
 }
 
 .login-logo-mark {
-  font-family: 'DM Serif Display', serif;
+  font-family: 'Inter', sans-serif;
   font-size: 42px;
   color: #15161A;
   line-height: 1;
@@ -43,7 +43,7 @@
 }
 
 .login-logo-name {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 20px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -53,7 +53,7 @@
 
 /* ── Headings ── */
 .login-heading {
-  font-family: 'DM Serif Display', serif;
+  font-family: 'Inter', sans-serif;
   font-size: 30px;
   font-weight: 400;
   color: #15161A;
@@ -102,7 +102,7 @@
   border-radius: 10px;
   background: #fff;
   color: #15161A;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
@@ -171,7 +171,7 @@
   border: 1.5px solid #DEDED8;
   border-radius: 10px;
   background: #fff;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 15px;
   color: #15161A;
   outline: none;
@@ -225,7 +225,7 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%2315161A' stroke-opacity='0.4' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 14px center;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 15px;
   color: #15161A;
   outline: none;
@@ -283,7 +283,7 @@
   color: #fff;
   border: none;
   border-radius: 10px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 15.5px;
   font-weight: 600;
   cursor: pointer;
