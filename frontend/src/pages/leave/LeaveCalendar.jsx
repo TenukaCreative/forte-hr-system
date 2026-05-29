@@ -6,8 +6,11 @@ import api from '../../api/axios';
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-const STATUS_BG = { APPROVED: '#D1FAE5', PENDING: '#FEF3C7', REJECTED: '#FEE2E2' };
-const STATUS_COLOR = { APPROVED: '#065F46', PENDING: '#92400E', REJECTED: '#991B1B' };
+const STATUS_STYLES = {
+  APPROVED: { bg: '#DCFCE7', color: '#16A34A' },
+  PENDING:  { bg: '#FEF3C7', color: '#D97706' },
+  REJECTED: { bg: '#FEE2E2', color: '#DC2626' },
+};
 
 function datesInRange(start, end) {
   const dates = [];
@@ -19,6 +22,19 @@ function datesInRange(start, end) {
   }
   return dates;
 }
+
+const navBtn = {
+  background: '#fff',
+  border: '1px solid #E4E3DC',
+  borderRadius: 8,
+  padding: '6px 10px',
+  cursor: 'pointer',
+  color: '#15161A',
+  display: 'flex',
+  alignItems: 'center',
+  fontFamily: 'inherit',
+  transition: 'border-color 0.18s',
+};
 
 export default function LeaveCalendar() {
   const [leaves, setLeaves] = useState([]);
@@ -51,71 +67,110 @@ export default function LeaveCalendar() {
   for (let i = 0; i < firstDay; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
+  const todayStr = today.toISOString().slice(0, 10);
+
   return (
-    <div>
-      {/* Calendar header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <button className="btn-ghost" style={{ padding: '6px 10px' }} onClick={prev}><ChevronLeft size={16} /></button>
-        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{MONTHS[month]} {year}</h3>
-        <button className="btn-ghost" style={{ padding: '6px 10px' }} onClick={next}><ChevronRight size={16} /></button>
+    <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: 24 }}>
+      <style>{`.cal-nav:hover { border-color: #C8203D !important; }`}</style>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <button className="cal-nav" style={navBtn} onClick={prev}><ChevronLeft size={16} /></button>
+        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#15161A', letterSpacing: '-0.01em' }}>
+          {MONTHS[month]} {year}
+        </h3>
+        <button className="cal-nav" style={navBtn} onClick={next}><ChevronRight size={16} /></button>
       </div>
 
       {/* Day headers */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 4 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, marginBottom: 8 }}>
         {DAYS.map((d) => (
-          <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: 'rgba(21,22,26,0.4)', padding: '4px 0' }}>{d}</div>
+          <div key={d} style={{
+            textAlign: 'center',
+            fontSize: 11,
+            fontWeight: 600,
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+            color: 'rgba(21,22,26,0.35)',
+            padding: '8px 0',
+          }}>
+            {d}
+          </div>
         ))}
       </div>
 
       {/* Calendar grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
         {cells.map((day, i) => {
-          if (!day) return <div key={`empty-${i}`} />;
+          if (!day) return <div key={`empty-${i}`} style={{ background: 'transparent' }} />;
+
           const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
           const dayLeaves = leaveMap[dateStr] || [];
-          const isToday = dateStr === today.toISOString().slice(0, 10);
+          const isToday = dateStr === todayStr;
+          const weekdayIdx = new Date(year, month, day).getDay();
+          const isWeekend = weekdayIdx === 0 || weekdayIdx === 6;
+
+          let bg = '#fff';
+          if (isToday) bg = 'rgba(200,32,61,0.03)';
+          else if (isWeekend) bg = '#FAFAF7';
+
           return (
             <div
               key={dateStr}
               style={{
-                minHeight: 56,
+                minHeight: 80,
                 border: `1px solid ${isToday ? '#C8203D' : '#E4E3DC'}`,
-                borderRadius: 6,
-                padding: '4px 6px',
-                background: isToday ? 'rgba(200,32,61,0.04)' : '#fff',
+                borderRadius: 8,
+                padding: 8,
+                background: bg,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 2,
               }}
             >
-              <span style={{ fontSize: 12, fontWeight: isToday ? 700 : 400, color: isToday ? '#C8203D' : '#15161A' }}>{day}</span>
-              {dayLeaves.map((l, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    marginTop: 2,
-                    borderRadius: 3,
-                    padding: '1px 4px',
-                    fontSize: 10,
-                    fontWeight: 600,
-                    background: STATUS_BG[l.status] || '#F3F4F6',
-                    color: STATUS_COLOR[l.status] || '#374151',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {l.leaveType}
-                </div>
-              ))}
+              <span style={{
+                fontSize: 13,
+                fontWeight: isToday ? 600 : 500,
+                color: isToday ? '#C8203D' : '#15161A',
+              }}>
+                {day}
+              </span>
+              {dayLeaves.map((l, idx) => {
+                const s = STATUS_STYLES[l.status] || STATUS_STYLES.PENDING;
+                return (
+                  <div
+                    key={idx}
+                    title={`${l.leaveType} · ${l.status}`}
+                    style={{
+                      marginTop: idx === 0 ? 4 : 0,
+                      borderRadius: 4,
+                      padding: '2px 6px',
+                      fontSize: 10,
+                      fontWeight: 600,
+                      background: s.bg,
+                      color: s.color,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {l.leaveType}
+                  </div>
+                );
+              })}
             </div>
           );
         })}
       </div>
 
       {/* Legend */}
-      <div style={{ display: 'flex', gap: 16, marginTop: 16, flexWrap: 'wrap' }}>
-        {Object.entries(STATUS_BG).map(([status, bg]) => (
+      <div style={{ display: 'flex', gap: 16, marginTop: 20, flexWrap: 'wrap' }}>
+        {Object.entries(STATUS_STYLES).map(([status, s]) => (
           <div key={status} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ width: 12, height: 12, borderRadius: 3, background: bg }} />
-            <span style={{ fontSize: 12, color: 'rgba(21,22,26,0.6)' }}>{status.charAt(0) + status.slice(1).toLowerCase()}</span>
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: s.color }} />
+            <span style={{ fontSize: 12, color: 'rgba(21,22,26,0.5)' }}>
+              {status.charAt(0) + status.slice(1).toLowerCase()}
+            </span>
           </div>
         ))}
       </div>
