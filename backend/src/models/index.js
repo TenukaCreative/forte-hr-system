@@ -8,6 +8,8 @@ const LeavePlan = require('./LeavePlan')(sequelize);
 const KPI = require('./KPI')(sequelize);
 const Task = require('./Task')(sequelize);
 const Notification = require('./Notification')(sequelize);
+const Team = require('./Team')(sequelize);
+const TeamMember = require('./TeamMember')(sequelize);
 
 // User <-> Employee
 User.hasOne(Employee, { foreignKey: 'userId' });
@@ -46,6 +48,16 @@ Task.belongsTo(User, { foreignKey: 'completedBy', as: 'completedByUser' });
 User.hasMany(Notification, { foreignKey: 'userId' });
 Notification.belongsTo(User, { foreignKey: 'userId' });
 
+// Team <-> User (creator)
+Team.belongsTo(User, { as: 'creator', foreignKey: 'createdBy' });
+User.hasMany(Team, { foreignKey: 'createdBy' });
+
+// Team <-> TeamMember <-> User
+Team.hasMany(TeamMember, { foreignKey: 'teamId', onDelete: 'CASCADE' });
+TeamMember.belongsTo(Team, { foreignKey: 'teamId' });
+TeamMember.belongsTo(User, { foreignKey: 'userId' });
+User.hasMany(TeamMember, { foreignKey: 'userId' });
+
 module.exports = {
   sequelize,
   User,
@@ -56,4 +68,6 @@ module.exports = {
   KPI,
   Task,
   Notification,
+  Team,
+  TeamMember,
 };

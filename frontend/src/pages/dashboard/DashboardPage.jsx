@@ -118,7 +118,7 @@ export default function DashboardPage() {
     .qa-card:hover { border-color: #C8203D; box-shadow: 0 2px 8px rgba(200,32,61,0.08); }
     .notif-row { transition: background 0.15s; }
     .notif-row:hover { background: #FAFAF7; }
-    .leave-cta:hover { background: rgba(200,32,61,0.06); }
+    .leave-cta:hover { background: #a81830 !important; }
     @media(max-width:768px){
       .dash-stats{grid-template-columns:1fr 1fr!important}
       .dash-main{grid-template-columns:1fr!important}
@@ -332,7 +332,7 @@ export default function DashboardPage() {
           <button
             className="leave-cta"
             onClick={() => navigate('/leave')}
-            style={{ marginTop: 16, width: '100%', padding: '10px 16px', border: '1.5px solid #C8203D', borderRadius: 8, background: 'transparent', color: '#C8203D', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.15s' }}
+            style={{ marginTop: 16, width: '100%', padding: '12px 16px', border: '1.5px solid #C8203D', borderRadius: 8, background: '#C8203D', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.18s' }}
           >
             Request Leave
           </button>

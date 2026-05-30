@@ -20,7 +20,7 @@ module.exports = (sequelize) => {
       type: DataTypes.TEXT,
       allowNull: true,
     },
-    dueDate: {
+    deadline: {
       type: DataTypes.DATEONLY,
       allowNull: true,
     },
@@ -36,6 +36,10 @@ module.exports = (sequelize) => {
       type: DataTypes.UUID,
       allowNull: true,
       references: { model: 'Users', key: 'id' },
+    },
+    earnedScore: {
+      type: DataTypes.DECIMAL(5, 2),
+      allowNull: true,
     },
   }, {
     timestamps: true,
