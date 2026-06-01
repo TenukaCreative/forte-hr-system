@@ -16,6 +16,10 @@ import LeaveOverview from './pages/hr/LeaveOverview';
 // Leave pages
 import LeavePage from './pages/leave/LeavePage';
 
+// Performance + PMO
+import PerformancePage from './pages/performance/PerformancePage';
+import TeamPage from './pages/pmo/TeamPage';
+
 // Calendar
 import CompanyCalendar from './pages/calendar/CompanyCalendar';
 
@@ -51,7 +55,7 @@ export default function App() {
         element={
           <ProtectedRoute>
             <RoleRoute roles={['PM', 'BA', 'HEAD_OF_PMO', 'HR_MANAGER', 'IT']}>
-              <PlaceholderPage title="My Performance" />
+              <PerformancePage />
             </RoleRoute>
           </ProtectedRoute>
         }
@@ -94,8 +98,8 @@ export default function App() {
         path="/team"
         element={
           <ProtectedRoute>
-            <RoleRoute roles={['HEAD_OF_PMO', 'HR_MANAGER', 'IT']}>
-              <PlaceholderPage title="Team Performance" />
+            <RoleRoute roles={['HEAD_OF_PMO']}>
+              <TeamPage />
             </RoleRoute>
           </ProtectedRoute>
         }

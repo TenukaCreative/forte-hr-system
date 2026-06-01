@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CalendarPlus, FolderOpen, TrendingUp, Bell, BarChart2 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { CalendarPlus, FolderOpen, TrendingUp, Bell, BarChart2, ListChecks } from 'lucide-react';
 import Shell from '../../components/layout/Shell';
 import api from '../../api/axios';
+import TasksDuePanel from '../../components/TasksDuePanel';
+import WeeklyChart from '../../components/WeeklyChart';
 
 const timeAgo = (date) => {
   if (!date) return '';
@@ -31,6 +34,16 @@ const todayString = () =>
   new Date().toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
+
+const weekRangeLabel = () => {
+  const now = new Date();
+  const start = new Date(now);
+  start.setDate(now.getDate() - ((now.getDay() + 6) % 7)); // Monday
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  const fmt = (d) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return `${fmt(start)} – ${fmt(end)}`;
+};
 
 const formatDayMonth = (iso) => {
   if (!iso) return '';
@@ -98,18 +111,32 @@ export default function DashboardPage() {
   const [data, setData] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [leaves, setLeaves] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const loadTasks = () => api.get('/tasks/my').then((t) => setTasks(t.data || []));
 
   useEffect(() => {
     Promise.all([
       api.get('/dashboard/me'),
       api.get('/notifications/me'),
       api.get('/leaves/my'),
+      loadTasks(),
     ])
       .then(([d, n, l]) => { setData(d.data); setNotifications(n.data); setLeaves(l.data || []); })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  const completeTask = async (taskId) => {
+    try {
+      await api.patch(`/tasks/${taskId}/complete`);
+      toast.success('Task marked complete');
+      loadTasks();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to complete task');
+    }
+  };
 
   const shimmerStyle = `
     @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
@@ -246,6 +273,14 @@ export default function DashboardPage() {
         </button>
       </div>
 
+      {/* Section A — Tasks & Deadlines */}
+      <div style={{ ...card, marginBottom: 24 }}>
+        <h3 style={{ ...sectionHeading, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <ListChecks size={18} style={{ color: '#C8203D' }} /> Tasks &amp; Deadlines
+        </h3>
+        <TasksDuePanel tasks={tasks} tabs={['overdue', 'today', 'week']} onComplete={completeTask} />
+      </div>
+
       {/* Section 3 — Main content row */}
       <div className="dash-main" style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 24, marginBottom: 24, alignItems: 'start' }}>
 
@@ -337,6 +372,15 @@ export default function DashboardPage() {
             Request Leave
           </button>
         </div>
+      </div>
+
+      {/* Section B — Weekly Overview */}
+      <div style={{ ...card, marginBottom: 24 }}>
+        <h3 style={{ ...sectionHeading, marginBottom: 2 }}>Weekly Overview</h3>
+        <p style={{ fontSize: 13, color: 'rgba(21,22,26,0.5)', margin: '0 0 16px' }}>
+          {weekRangeLabel()}
+        </p>
+        <WeeklyChart tasks={tasks} height={160} />
       </div>
 
       {/* Section 4 — Notifications */}
