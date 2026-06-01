@@ -6,6 +6,7 @@ import Shell from '../../components/layout/Shell';
 import api from '../../api/axios';
 import TasksDuePanel from '../../components/TasksDuePanel';
 import WeeklyChart from '../../components/WeeklyChart';
+import { KpiDates } from '../../components/ui';
 
 const timeAgo = (date) => {
   if (!date) return '';
@@ -318,7 +319,7 @@ export default function DashboardPage() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                           <span style={{ fontSize: 13, color: '#15161A', fontWeight: 500 }}>{kpi.title}</span>
-                          {kpi.quarter && <span style={{ background: '#F5F4EF', color: 'rgba(21,22,26,0.6)', borderRadius: 6, padding: '1px 7px', fontSize: 11, fontWeight: 500 }}>{kpi.quarter}</span>}
+                          <KpiDates startDate={kpi.startDate} endDate={kpi.endDate} size={11} />
                         </div>
                         <span style={{ fontSize: 12, color: 'rgba(21,22,26,0.5)' }}>{kpi.earnedScore}/{kpi.targetScore}</span>
                       </div>

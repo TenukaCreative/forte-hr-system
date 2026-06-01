@@ -6,10 +6,7 @@ import api from '../../api/axios';
 import TasksDuePanel from '../../components/TasksDuePanel';
 import WeeklyChart from '../../components/WeeklyChart';
 import { C, card, scoreColor, formatDate, isOverdue } from '../../components/theme';
-import { Spinner, EmptyState, Badge } from '../../components/ui';
-
-const QUARTER_NOW = `Q${Math.floor(new Date().getMonth() / 3) + 1}`;
-const YEAR_NOW = new Date().getFullYear();
+import { Spinner, EmptyState, Badge, KpiDates } from '../../components/ui';
 
 const sectionHeading = { fontSize: 18, fontWeight: 600, color: C.dark, margin: '0 0 16px', letterSpacing: '-0.01em' };
 const statLabel = { fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: C.faint, margin: 0 };
@@ -58,7 +55,7 @@ export default function PerformancePage() {
     <Shell>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, color: C.dark, margin: '0 0 6px', letterSpacing: '-0.02em' }}>My Performance</h1>
-        <p style={{ fontSize: 14, color: C.muted, margin: 0 }}>{QUARTER_NOW} {YEAR_NOW} · your KPIs, tasks and weekly activity</p>
+        <p style={{ fontSize: 14, color: C.muted, margin: 0 }}>Your KPIs, tasks and weekly activity</p>
       </div>
 
       {!hasData ? (
@@ -121,7 +118,7 @@ export default function PerformancePage() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, gap: 8 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                           <span style={{ fontSize: 14, fontWeight: 500, color: C.dark }}>{kpi.title}</span>
-                          {kpi.quarter && <span style={{ background: '#F5F4EF', color: 'rgba(21,22,26,0.6)', borderRadius: 6, padding: '1px 7px', fontSize: 11, fontWeight: 500 }}>{kpi.quarter}</span>}
+                          <KpiDates startDate={kpi.startDate} endDate={kpi.endDate} size={11} />
                         </div>
                         <span style={{ fontSize: 12, color: C.muted }}>{kpi.earnedScore}/{kpi.targetScore}</span>
                       </div>

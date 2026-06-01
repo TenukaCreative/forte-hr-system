@@ -17,7 +17,7 @@ export default function MyTeams() {
     api.get('/teams').then((r) => setTeams(r.data || [])).catch(() => toast.error('Failed to load teams'));
 
   useEffect(() => {
-    Promise.all([loadTeams(), api.get('/employees').then((r) => setAllUsers(r.data || []))])
+    Promise.all([loadTeams(), api.get('/employees/users').then((r) => setAllUsers(r.data || []))])
       .finally(() => setLoading(false));
   }, []);
 

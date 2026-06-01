@@ -18,8 +18,8 @@ const calcPerformance = async (employeeId) => {
     return {
       id: kpi.id,
       title: kpi.title,
-      quarter: kpi.quarter,
-      year: kpi.year,
+      startDate: kpi.startDate,
+      endDate: kpi.endDate,
       targetScore,
       earnedScore: parseFloat(earnedScore.toFixed(2)),
       totalTasks,

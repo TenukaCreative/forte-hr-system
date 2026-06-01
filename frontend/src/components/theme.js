@@ -54,6 +54,17 @@ export const formatDayMonth = (iso) =>
 export const isOverdue = (deadline, status) =>
   status === 'PENDING' && deadline && new Date(`${deadline}T23:59:59`) < new Date();
 
+// Colour for a KPI's ETA / end date: red if past, amber if within 7 days, else normal.
+export const etaColor = (endDate) => {
+  if (!endDate) return C.muted;
+  const end = new Date(`${endDate}T23:59:59`);
+  const now = new Date();
+  if (end < now) return C.red;
+  const days = (end - now) / (1000 * 60 * 60 * 24);
+  if (days <= 7) return C.amber;
+  return C.dark;
+};
+
 // --- Week / day helpers (week runs Monday → Sunday) ---
 export const startOfWeek = (d = new Date()) => {
   const date = new Date(d);

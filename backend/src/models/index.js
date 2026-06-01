@@ -41,6 +41,10 @@ KPI.belongsTo(User, { foreignKey: 'assignedBy', as: 'assigner' });
 KPI.hasMany(Task, { foreignKey: 'kpiId', as: 'tasks' });
 Task.belongsTo(KPI, { foreignKey: 'kpiId' });
 
+// Team <-> KPI
+KPI.belongsTo(Team, { foreignKey: 'teamId', as: 'team' });
+Team.hasMany(KPI, { foreignKey: 'teamId' });
+
 // User <-> Task (completedBy)
 Task.belongsTo(User, { foreignKey: 'completedBy', as: 'completedByUser' });
 

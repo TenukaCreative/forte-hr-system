@@ -109,7 +109,7 @@ const getMyTasks = async (req, res, next) => {
       include: [{
         model: KPI,
         where: { employeeId: employee.id },
-        attributes: ['id', 'title', 'quarter', 'year', 'targetScore'],
+        attributes: ['id', 'title', 'startDate', 'endDate', 'targetScore'],
       }],
       order: [['deadline', 'ASC']],
     });

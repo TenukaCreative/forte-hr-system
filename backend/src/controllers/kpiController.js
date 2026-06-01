@@ -1,4 +1,4 @@
-const { KPI, Task, Employee, User, Notification } = require('../models');
+const { KPI, Task, Employee, User, Team, Notification } = require('../models');
 
 // GET /api/kpis/my-team — every KPI this PMO has assigned, with member + tasks
 const getMyTeamKpis = async (req, res, next) => {
@@ -11,6 +11,30 @@ const getMyTeamKpis = async (req, res, next) => {
           attributes: ['id', 'department', 'designation'],
           include: [{ model: User, attributes: ['id', 'name', 'role'] }],
         },
+        { model: Team, as: 'team', attributes: ['id', 'name'] },
+        { model: Task, as: 'tasks' },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+
+    res.json(kpis);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/kpis/team/:teamId — all KPIs assigned within a specific team
+const getKPIsByTeam = async (req, res, next) => {
+  try {
+    const kpis = await KPI.findAll({
+      where: { assignedBy: req.user.id, teamId: req.params.teamId },
+      include: [
+        {
+          model: Employee,
+          attributes: ['id', 'department', 'designation'],
+          include: [{ model: User, attributes: ['id', 'name', 'role'] }],
+        },
+        { model: Team, as: 'team', attributes: ['id', 'name'] },
         { model: Task, as: 'tasks' },
       ],
       order: [['createdAt', 'DESC']],
@@ -25,9 +49,9 @@ const getMyTeamKpis = async (req, res, next) => {
 // POST /api/kpis — assign a new KPI to an employee
 const createKpi = async (req, res, next) => {
   try {
-    const { employeeId, title, description, quarter, year, targetScore } = req.body;
-    if (!employeeId || !title || !quarter || !year) {
-      return res.status(400).json({ message: 'employeeId, title, quarter and year are required' });
+    const { employeeId, teamId, title, description, startDate, endDate, targetScore } = req.body;
+    if (!employeeId || !title) {
+      return res.status(400).json({ message: 'employeeId and title are required' });
     }
 
     const employee = await Employee.findByPk(employeeId, {
@@ -37,18 +61,19 @@ const createKpi = async (req, res, next) => {
 
     const kpi = await KPI.create({
       employeeId,
+      teamId: teamId || null,
       assignedBy: req.user.id,
       title,
       description,
-      quarter,
-      year,
+      startDate: startDate || null,
+      endDate: endDate || null,
       targetScore: targetScore ?? 100,
     });
 
     if (employee.User?.id) {
       await Notification.create({
         userId: employee.User.id,
-        message: `New KPI assigned: ${title} for ${quarter} ${year}`,
+        message: `New KPI assigned: ${title}.${endDate ? ` ETA: ${endDate}` : ''}`,
       });
     }
 
@@ -64,10 +89,12 @@ const updateKpi = async (req, res, next) => {
     const kpi = await KPI.findOne({ where: { id: req.params.kpiId, assignedBy: req.user.id } });
     if (!kpi) return res.status(404).json({ message: 'KPI not found' });
 
-    const { title, description, targetScore, status } = req.body;
+    const { title, description, startDate, endDate, targetScore, status } = req.body;
     await kpi.update({
       title: title ?? kpi.title,
       description: description ?? kpi.description,
+      startDate: startDate !== undefined ? startDate : kpi.startDate,
+      endDate: endDate !== undefined ? endDate : kpi.endDate,
       targetScore: targetScore ?? kpi.targetScore,
       status: status ?? kpi.status,
     });
@@ -109,6 +136,7 @@ const getEmployeeKpis = async (req, res, next) => {
 
 module.exports = {
   getMyTeamKpis,
+  getKPIsByTeam,
   createKpi,
   updateKpi,
   deleteKpi,

@@ -1,6 +1,18 @@
 // Shared presentational components for the performance / PMO modules.
 // Design tokens and helpers live in ./theme.js.
-import { C, card, STATUS_BADGE } from './theme';
+import { C, card, STATUS_BADGE, formatDate, etaColor } from './theme';
+
+// "01 Jun 2026 → 30 Jun 2026" with the end date (ETA) colour-coded.
+export function KpiDates({ startDate, endDate, size = 12 }) {
+  if (!startDate && !endDate) return null;
+  return (
+    <span style={{ fontSize: size, fontWeight: 500, whiteSpace: 'nowrap' }}>
+      <span style={{ color: C.muted }}>{startDate ? formatDate(startDate) : '—'}</span>
+      <span style={{ color: 'rgba(21,22,26,0.3)', margin: '0 6px' }}>→</span>
+      <span style={{ color: etaColor(endDate) }}>{endDate ? formatDate(endDate) : '—'}</span>
+    </span>
+  );
+}
 
 const statLabel = {
   fontSize: 11,

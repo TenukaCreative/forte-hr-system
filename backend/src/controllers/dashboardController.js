@@ -27,6 +27,7 @@ const getDashboard = async (req, res, next) => {
         totalKPIs: perf.kpis.length,
         completedTasks: perf.kpis.reduce((s, k) => s + k.completedTasks, 0),
         totalTasks: perf.kpis.reduce((s, k) => s + k.totalTasks, 0),
+        kpis: perf.kpis,
       };
 
       const docCount = await Document.count({ where: { employeeId: employee.id } });

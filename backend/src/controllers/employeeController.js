@@ -28,6 +28,30 @@ const getEmployees = async (req, res, next) => {
   }
 };
 
+// Lightweight user list for dropdowns (team members, KPI assignment).
+// Includes the employee id so PMO screens can assign KPIs without the
+// full HR-only employee listing.
+const getAllUsers = async (req, res, next) => {
+  try {
+    const users = await User.findAll({
+      attributes: ['id', 'name', 'email', 'role'],
+      where: { isActive: true },
+      include: [{ model: Employee, attributes: ['id'], required: false }],
+      order: [['name', 'ASC']],
+    });
+
+    res.json(users.map((u) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      employee: u.Employee ? { id: u.Employee.id } : null,
+    })));
+  } catch (err) {
+    next(err);
+  }
+};
+
 const getEmployee = async (req, res, next) => {
   try {
     const { userId } = req.params;
@@ -75,4 +99,4 @@ const updateEmployee = async (req, res, next) => {
   }
 };
 
-module.exports = { getEmployees, getEmployee, createEmployee, updateEmployee };
+module.exports = { getEmployees, getAllUsers, getEmployee, createEmployee, updateEmployee };

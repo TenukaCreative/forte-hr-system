@@ -17,6 +17,11 @@ module.exports = (sequelize) => {
       allowNull: false,
       references: { model: 'Users', key: 'id' },
     },
+    teamId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: { model: 'Teams', key: 'id' },
+    },
     title: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -25,13 +30,14 @@ module.exports = (sequelize) => {
       type: DataTypes.TEXT,
       allowNull: true,
     },
-    quarter: {
-      type: DataTypes.ENUM('Q1', 'Q2', 'Q3', 'Q4'),
-      allowNull: false,
+    startDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
     },
-    year: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
+    // KPI deadline / ETA
+    endDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
     },
     targetScore: {
       type: DataTypes.DECIMAL(5, 2),
