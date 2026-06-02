@@ -10,6 +10,8 @@ const Task = require('./Task')(sequelize);
 const Notification = require('./Notification')(sequelize);
 const Team = require('./Team')(sequelize);
 const TeamMember = require('./TeamMember')(sequelize);
+const EthicsReview = require('./EthicsReview')(sequelize);
+const PerformanceSettings = require('./PerformanceSettings')(sequelize);
 
 // User <-> Employee
 User.hasOne(Employee, { foreignKey: 'userId' });
@@ -62,6 +64,14 @@ TeamMember.belongsTo(Team, { foreignKey: 'teamId' });
 TeamMember.belongsTo(User, { foreignKey: 'userId' });
 User.hasMany(TeamMember, { foreignKey: 'userId' });
 
+// Employee <-> EthicsReview
+Employee.hasMany(EthicsReview, { foreignKey: 'employeeId' });
+EthicsReview.belongsTo(Employee, { foreignKey: 'employeeId' });
+EthicsReview.belongsTo(User, { as: 'reviewer', foreignKey: 'reviewedBy' });
+
+// User <-> PerformanceSettings (creator)
+PerformanceSettings.belongsTo(User, { foreignKey: 'createdBy' });
+
 module.exports = {
   sequelize,
   User,
@@ -74,4 +84,6 @@ module.exports = {
   Notification,
   Team,
   TeamMember,
+  EthicsReview,
+  PerformanceSettings,
 };

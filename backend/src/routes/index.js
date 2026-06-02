@@ -10,6 +10,8 @@ const notificationRoutes = require('./notifications');
 const teamRoutes = require('./teams');
 const kpiRoutes = require('./kpis');
 const taskRoutes = require('./tasks');
+const ethicsRoutes = require('./ethics');
+const settingsRoutes = require('./settings');
 
 router.use('/auth', authRoutes);
 router.use('/employees', employeeRoutes);
@@ -20,5 +22,7 @@ router.use('/notifications', notificationRoutes);
 router.use('/teams', teamRoutes);
 router.use('/kpis', kpiRoutes);
 router.use('/tasks', taskRoutes);
+router.use('/ethics', ethicsRoutes);
+router.use('/settings', settingsRoutes);
 
 module.exports = router;

@@ -5,12 +5,14 @@ import PmoOverview from './PmoOverview';
 import MyTeams from './MyTeams';
 import KpiAssign from './KpiAssign';
 import TaskTracker from './TaskTracker';
+import EthicsReviewTab from './EthicsReviewTab';
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
   { key: 'teams', label: 'My Teams' },
   { key: 'kpis', label: 'KPI Assign' },
   { key: 'tasks', label: 'Task Tracker' },
+  { key: 'ethics', label: 'Ethics Review' },
 ];
 
 export default function TeamPage() {
@@ -35,6 +37,7 @@ export default function TeamPage() {
       {tab === 'teams' && <MyTeams />}
       {tab === 'kpis' && <KpiAssign />}
       {tab === 'tasks' && <TaskTracker />}
+      {tab === 'ethics' && <EthicsReviewTab />}
     </Shell>
   );
 }

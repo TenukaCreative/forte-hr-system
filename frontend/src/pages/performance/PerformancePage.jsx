@@ -3,6 +3,7 @@ import { toast } from 'react-hot-toast';
 import { ChevronDown, ChevronRight, Target } from 'lucide-react';
 import Shell from '../../components/layout/Shell';
 import api from '../../api/axios';
+import { useAuth } from '../../context/AuthContext';
 import TasksDuePanel from '../../components/TasksDuePanel';
 import WeeklyChart from '../../components/WeeklyChart';
 import { C, card, scoreColor, formatDate, isOverdue } from '../../components/theme';
@@ -11,7 +12,45 @@ import { Spinner, EmptyState, Badge, KpiDates } from '../../components/ui';
 const sectionHeading = { fontSize: 18, fontWeight: 600, color: C.dark, margin: '0 0 16px', letterSpacing: '-0.01em' };
 const statLabel = { fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: C.faint, margin: 0 };
 
+const PERF_CRITERIA = [
+  { field: 'timeliness', label: 'Timeliness & Task Completion', weight: 20 },
+  { field: 'workQuality', label: 'Work Quality & Accuracy', weight: 20 },
+  { field: 'workDiscipline', label: 'Work Discipline & Availability', weight: 15 },
+  { field: 'ownership', label: 'Ownership & Accountability', weight: 15 },
+  { field: 'collaboration', label: 'Collaboration & Communication', weight: 10 },
+  { field: 'productOwnership', label: 'Product Ownership & Contribution', weight: 10 },
+  { field: 'businessDevelopment', label: 'Business Development Contribution', weight: 5 },
+  { field: 'learningImprovement', label: 'Learning & Improvement', weight: 5 },
+];
+
+const BEHAV_CRITERIA = [
+  { field: 'behavioralMetrics', label: 'Behavioral Metrics', weight: 5 },
+  { field: 'attitude', label: 'Attitude', weight: 5 },
+  { field: 'effort', label: 'Effort', weight: 5 },
+  { field: 'trust', label: 'Trust', weight: 5 },
+];
+
+// One criteria row: label + weight, score bar, points earned.
+function EthicsBar({ criteria, review }) {
+  const value = Number(review[criteria.field]) || 0;
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8 }}>
+        <span style={{ fontSize: 13, color: C.dark }}>{criteria.label}</span>
+        <span style={{ fontSize: 12, color: C.muted, whiteSpace: 'nowrap' }}>{value}/100</span>
+      </div>
+      <div style={{ height: 6, background: '#E4E3DC', borderRadius: 4, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${value}%`, background: C.accent, borderRadius: 4 }} />
+      </div>
+      <p style={{ margin: '4px 0 0', fontSize: 11, color: C.faint }}>
+        {(value / 100 * criteria.weight).toFixed(1)}/{criteria.weight} pts
+      </p>
+    </div>
+  );
+}
+
 export default function PerformancePage() {
+  const { user } = useAuth();
   const [perf, setPerf] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,7 +88,8 @@ export default function PerformancePage() {
     (tasksByKpi[id] = tasksByKpi[id] || []).push(t);
   });
 
-  const hasData = perf && (perf.kpis?.length || tasks.length);
+  const showMgmt = user?.role === 'HEAD_OF_PMO' && perf?.managementScore != null;
+  const hasData = perf && (perf.kpis?.length || tasks.length || showMgmt);
 
   return (
     <Shell>
@@ -65,13 +105,26 @@ export default function PerformancePage() {
       ) : (
         <>
           {/* Stat cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 20, marginBottom: 20 }} className="pf-stats">
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${showMgmt ? 4 : 3},1fr)`, gap: 20, marginBottom: 20 }} className="pf-stats">
+            {showMgmt && (
+              <div style={card}>
+                <p style={statLabel}>Management Score</p>
+                <p style={{ fontSize: 42, fontWeight: 600, color: scoreColor(perf.managementScore), margin: '10px 0 4px', lineHeight: 1, letterSpacing: '-0.02em' }}>
+                  {perf.managementScore}<span style={{ fontSize: 20, fontWeight: 400, color: 'rgba(21,22,26,0.3)' }}>/100</span>
+                </p>
+                <p style={{ fontSize: 13, color: C.muted, margin: 0 }}>
+                  based on team performance · {perf.teamCompletedTasks ?? 0}/{perf.teamTotalTasks ?? 0} tasks completed
+                </p>
+              </div>
+            )}
             <div style={card}>
               <p style={statLabel}>Overall Score</p>
               <p style={{ fontSize: 42, fontWeight: 600, color: scoreColor(overall), margin: '10px 0 4px', lineHeight: 1, letterSpacing: '-0.02em' }}>
                 {overall}<span style={{ fontSize: 20, fontWeight: 400, color: 'rgba(21,22,26,0.3)' }}>/100</span>
               </p>
-              <p style={{ fontSize: 13, color: C.muted, margin: 0 }}>{perf?.totalKPIs ?? perf?.kpis?.length ?? 0} KPI{(perf?.totalKPIs ?? 0) !== 1 ? 's' : ''} assigned</p>
+              <p style={{ fontSize: 12, color: C.muted, margin: 0 }}>
+                KPI {perf?.kpiScore ?? 0} ({perf?.kpiWeight ?? 50}%) · Ethics {perf?.ethicsScore ?? 0} ({perf?.ethicsWeight ?? 50}%)
+              </p>
             </div>
             <div style={card}>
               <p style={statLabel}>Tasks</p>
@@ -164,6 +217,44 @@ export default function PerformancePage() {
             </div>
           </div>
 
+          {/* Ethics review */}
+          {perf?.ethicsReview ? (
+            <div style={{ ...card, marginBottom: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <h3 style={{ fontSize: 18, fontWeight: 600, color: C.dark, margin: 0 }}>Ethics Review</h3>
+                <span style={{ background: '#F5F4EF', color: C.muted, borderRadius: 100, padding: '4px 12px', fontSize: 12, fontWeight: 600 }}>
+                  {perf.ethicsReview.period}
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }} className="pf-ethics">
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: C.dark, margin: '0 0 14px' }}>Performance Metrics</p>
+                  {PERF_CRITERIA.map((c) => <EthicsBar key={c.field} criteria={c} review={perf.ethicsReview} />)}
+                </div>
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: C.dark, margin: '0 0 14px' }}>Behavioral Metrics</p>
+                  {BEHAV_CRITERIA.map((c) => <EthicsBar key={c.field} criteria={c} review={perf.ethicsReview} />)}
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 16, borderTop: `1px solid ${C.border}`, marginTop: 16 }}>
+                <span style={{ fontSize: 15, fontWeight: 600, color: C.dark }}>Ethics Total</span>
+                <span style={{ fontSize: 24, fontWeight: 700, color: scoreColor(Number(perf.ethicsReview.ethicsScore)) }}>
+                  {perf.ethicsReview.ethicsScore}<span style={{ fontSize: 14, fontWeight: 400, color: C.muted }}>/100</span>
+                </span>
+              </div>
+              {perf.ethicsReview.notes && (
+                <p style={{ margin: '12px 0 0', fontSize: 13, color: C.muted, fontStyle: 'italic' }}>
+                  &ldquo;{perf.ethicsReview.notes}&rdquo;
+                </p>
+              )}
+            </div>
+          ) : (
+            <div style={{ ...card, marginBottom: 20 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 600, color: C.dark, margin: '0 0 12px' }}>Ethics Review</h3>
+              <EmptyState title="No ethics review yet" subtitle="Your manager will submit an ethics review for your performance period" />
+            </div>
+          )}
+
           {/* Tasks due */}
           <div style={{ ...card, marginBottom: 20 }}>
             <h3 style={sectionHeading}>Upcoming &amp; Overdue Tasks</h3>
@@ -179,7 +270,7 @@ export default function PerformancePage() {
         </>
       )}
 
-      <style>{`@media(max-width:860px){.pf-stats{grid-template-columns:1fr!important}.pf-main{grid-template-columns:1fr!important}}`}</style>
+      <style>{`@media(max-width:860px){.pf-stats{grid-template-columns:1fr!important}.pf-main{grid-template-columns:1fr!important}.pf-ethics{grid-template-columns:1fr!important}}`}</style>
     </Shell>
   );
 }

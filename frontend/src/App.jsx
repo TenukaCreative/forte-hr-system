@@ -18,15 +18,27 @@ import LeavePage from './pages/leave/LeavePage';
 
 // Performance + PMO
 import PerformancePage from './pages/performance/PerformancePage';
+import PMOPerformancePage from './pages/performance/PMOPerformancePage';
 import TeamPage from './pages/pmo/TeamPage';
 
 // Calendar
 import CompanyCalendar from './pages/calendar/CompanyCalendar';
 
+// Settings
+import SettingsPage from './pages/settings/SettingsPage';
+
 function RoleRoute({ roles, children }) {
   const { user } = useAuth();
   if (!roles.includes(user?.role)) return <Navigate to="/dashboard" replace />;
   return children;
+}
+
+function PerformanceRouter() {
+  const { user } = useAuth();
+  if (user?.role === 'HEAD_OF_PMO') {
+    return <PMOPerformancePage />;
+  }
+  return <PerformancePage />;
 }
 
 export default function App() {
@@ -49,14 +61,12 @@ export default function App() {
       <Route path="/leave"     element={<ProtectedRoute><LeavePage /></ProtectedRoute>} />
       <Route path="/calendar"  element={<ProtectedRoute><CompanyCalendar /></ProtectedRoute>} />
 
-      {/* Performance — PM / BA / HEAD_OF_PMO */}
+      {/* Performance — PMO head gets the team view, everyone else their own */}
       <Route
         path="/performance"
         element={
           <ProtectedRoute>
-            <RoleRoute roles={['PM', 'BA', 'HEAD_OF_PMO', 'HR_MANAGER', 'IT']}>
-              <PerformancePage />
-            </RoleRoute>
+            <PerformanceRouter />
           </ProtectedRoute>
         }
       />
@@ -110,6 +120,16 @@ export default function App() {
           <ProtectedRoute>
             <RoleRoute roles={['HEAD_OF_PMO', 'HR_MANAGER', 'IT']}>
               <LeaveOverview />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <RoleRoute roles={['HEAD_OF_PMO']}>
+              <SettingsPage />
             </RoleRoute>
           </ProtectedRoute>
         }

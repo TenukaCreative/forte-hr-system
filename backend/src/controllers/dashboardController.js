@@ -1,5 +1,6 @@
 const { User, Employee, LeaveRequest, Document, Notification } = require('../models');
 const calcPerformance = require('../utils/calcPerformance');
+const { calcPMOScore } = require('../utils/calcPMOScore');
 
 const getDashboard = async (req, res, next) => {
   try {
@@ -23,11 +24,16 @@ const getDashboard = async (req, res, next) => {
 
       const perf = await calcPerformance(employee.id);
       performance = {
-        overallScore: perf.overallScore,
+        overallScore: perf.finalScore,
+        kpiScore: perf.kpiScore,
+        ethicsScore: perf.ethicsScore,
+        kpiWeight: perf.kpiWeight,
+        ethicsWeight: perf.ethicsWeight,
         totalKPIs: perf.kpis.length,
         completedTasks: perf.kpis.reduce((s, k) => s + k.completedTasks, 0),
         totalTasks: perf.kpis.reduce((s, k) => s + k.totalTasks, 0),
         kpis: perf.kpis,
+        ethicsReview: perf.ethicsReview,
       };
 
       const docCount = await Document.count({ where: { employeeId: employee.id } });
@@ -37,6 +43,20 @@ const getDashboard = async (req, res, next) => {
         attributes: ['uploadedAt'],
       });
       documents = { total: docCount, latestUpload: latestDoc?.uploadedAt || null };
+    }
+
+    // Management score for HEAD_OF_PMO — based on team task completion, not their
+    // own KPIs. Computed even without an employee record so a PMO who only manages
+    // (no personal KPIs) still sees their management score.
+    if (req.user.role === 'HEAD_OF_PMO') {
+      const pmoScore = await calcPMOScore(req.user.id);
+      performance = performance || {
+        overallScore: 0, totalKPIs: 0, completedTasks: 0, totalTasks: 0, kpis: [],
+      };
+      performance.managementScore = pmoScore.score;
+      performance.teamTotalTasks = pmoScore.totalTasks;
+      performance.teamCompletedTasks = pmoScore.completedTasks;
+      performance.teamOverdueTasks = pmoScore.overdueTasks;
     }
 
     const unread = await Notification.count({ where: { userId: id, isRead: false } });
