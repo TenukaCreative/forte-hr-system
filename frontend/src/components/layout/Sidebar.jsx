@@ -1,14 +1,25 @@
+import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../api/axios';
 import { NAV } from './navConfig';
 import forteLogo from '../../assets/forte-logo.webp';
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
   const sections = NAV[user?.role] || [];
-  const initials = user?.name
-    ? user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+
+  // The JWT name can be stale after an HR edit — pull the live name from /auth/me.
+  const [name, setName] = useState(user?.name);
+  useEffect(() => {
+    api.get('/auth/me')
+      .then((r) => setName(r.data?.name || user?.name))
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const initials = name
+    ? name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
     : '??';
 
   return (
@@ -41,7 +52,7 @@ export default function Sidebar() {
       <div className="sidebar-user">
         <div className="user-avatar">{initials}</div>
         <div className="user-info">
-          <p className="user-name">{user?.name}</p>
+          <p className="user-name">{name}</p>
           <p className="user-role">{user?.role?.replace(/_/g, ' ')}</p>
         </div>
         <button className="logout-btn" onClick={logout} title="Logout">

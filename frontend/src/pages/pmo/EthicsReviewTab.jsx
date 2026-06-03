@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Users2 } from 'lucide-react';
 import api from '../../api/axios';
+import { useAuth } from '../../context/AuthContext';
 import { C, card, fieldLabel, inputStyle, scoreColor, formatDate } from '../../components/theme';
 import { Spinner, EmptyState, Button, Badge } from '../../components/ui';
 
@@ -76,6 +77,7 @@ function SliderRow({ criteria, value, onChange }) {
 }
 
 export default function EthicsReviewTab() {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -158,6 +160,9 @@ export default function EthicsReviewTab() {
 
   if (loading) return <Spinner />;
 
+  // A PMO cannot review themselves — keep them out of the member list.
+  const filteredUsers = users.filter((u) => u.id !== currentUser?.id);
+
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
@@ -173,12 +178,12 @@ export default function EthicsReviewTab() {
         {/* Member list */}
         <div style={{ ...card, padding: 0, overflow: 'hidden' }}>
           <p style={{ ...fieldLabel, padding: '16px 16px 10px', margin: 0 }}>Team Members</p>
-          {users.length === 0 ? (
+          {filteredUsers.length === 0 ? (
             <p style={{ fontSize: 13, color: C.faint, padding: '0 16px 16px', margin: 0 }}>No users found.</p>
           ) : (
             <div>
               <style>{`.er-row:hover{background:#FAFAF7}`}</style>
-              {users.map((u) => {
+              {filteredUsers.map((u) => {
                 const active = selectedUser?.id === u.id;
                 return (
                   <button key={u.id} className="er-row" onClick={() => selectUser(u)}

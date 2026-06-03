@@ -22,6 +22,7 @@ export default function EmployeeDetailPage() {
   const [dragging, setDragging] = useState(false);
 
   const [form, setForm] = useState({
+    name: '',
     employeeCode: '', department: '', designation: '',
     joinDate: '', contactNumber: '', address: '',
     emergencyContact: '', emergencyPhone: '',
@@ -37,6 +38,7 @@ export default function EmployeeDetailPage() {
       setDocuments(data.documents || []);
       if (data.employee) {
         setForm({
+          name:            data.user?.name || '',
           employeeCode:    data.employee.employeeCode || '',
           department:      data.employee.department || '',
           designation:     data.employee.designation || '',
@@ -46,6 +48,9 @@ export default function EmployeeDetailPage() {
           emergencyContact: data.employee.emergencyContact || '',
           emergencyPhone:  data.employee.emergencyPhone || '',
         });
+      } else {
+        // No employee record yet — still seed the name from the user account.
+        setForm((prev) => ({ ...prev, name: data.user?.name || '' }));
       }
     } catch { toast.error('Failed to load employee'); }
     finally { setLoading(false); }
@@ -123,6 +128,10 @@ export default function EmployeeDetailPage() {
         <div className="card">
           <h3 className="section-title">Employee Profile</h3>
           <form onSubmit={handleSave}>
+            <div className="form-group">
+              <label className="form-label">Full Name *</label>
+              <input className="form-input" value={form.name} onChange={f('name')} required placeholder="e.g. John Smith" />
+            </div>
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Employee Code *</label>

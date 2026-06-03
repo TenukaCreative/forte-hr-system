@@ -52,9 +52,15 @@ const microsoftCallback = async (req, res, next) => {
 };
 
 // GET /api/auth/me
-// Role is read from the JWT — no DB call needed.
-const me = (req, res) => {
-  res.json(req.user);
+// Role/id/email come from the JWT, but name is pulled fresh from the DB so it
+// reflects HR edits made after the user's last login (the JWT name is stale).
+const me = async (req, res, next) => {
+  try {
+    const dbUser = await User.findByPk(req.user.id, { attributes: ['name'] });
+    res.json({ ...req.user, name: dbUser?.name ?? req.user.name });
+  } catch (err) {
+    next(err);
+  }
 };
 
 module.exports = { devLogin, microsoftCallback, me };
