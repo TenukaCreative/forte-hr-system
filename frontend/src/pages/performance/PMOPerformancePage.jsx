@@ -127,10 +127,10 @@ export default function PMOPerformancePage() {
       {/* Page header */}
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, color: C.dark, margin: '0 0 6px', letterSpacing: '-0.02em' }}>
-          Team Performance
+          My Performance
         </h1>
         <p style={{ fontSize: 14, color: C.muted, margin: 0 }}>
-          Your management score and team task overview
+          Your management score and team performance overview
         </p>
       </div>
 

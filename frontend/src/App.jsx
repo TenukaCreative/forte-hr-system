@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage';
 
 // Dashboard
 import DashboardPage from './pages/dashboard/DashboardPage';
+import PMODashboardPage from './pages/dashboard/PMODashboardPage';
 
 // HR pages
 import EmployeeManagement from './pages/hr/EmployeeManagement';
@@ -41,6 +42,14 @@ function PerformanceRouter() {
   return <PerformancePage />;
 }
 
+function DashboardRouter() {
+  const { user } = useAuth();
+  if (user?.role === 'HEAD_OF_PMO') {
+    return <PMODashboardPage />;
+  }
+  return <DashboardPage />;
+}
+
 export default function App() {
   const { isAuthenticated } = useAuth();
 
@@ -57,7 +66,7 @@ export default function App() {
       />
 
       {/* Authenticated — all roles */}
-      <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+      <Route path="/dashboard" element={<ProtectedRoute><DashboardRouter /></ProtectedRoute>} />
       <Route path="/leave"     element={<ProtectedRoute><LeavePage /></ProtectedRoute>} />
       <Route path="/calendar"  element={<ProtectedRoute><CompanyCalendar /></ProtectedRoute>} />
 

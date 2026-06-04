@@ -44,7 +44,6 @@ export const NAV = {
         { icon: Users2,       label: 'Team Performance', path: '/team' },
         { icon: CheckSquare,  label: 'Leave Approvals',  path: '/leave-approvals' },
         { icon: ClipboardList, label: 'KPI Management',  path: '/kpis' },
-        { icon: Settings,     label: 'Settings',         path: '/settings' },
       ],
     },
   ],

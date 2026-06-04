@@ -6,6 +6,7 @@ import MyTeams from './MyTeams';
 import KpiAssign from './KpiAssign';
 import TaskTracker from './TaskTracker';
 import EthicsReviewTab from './EthicsReviewTab';
+import PerformanceSettings from '../settings/PerformanceSettings';
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
@@ -13,6 +14,7 @@ const TABS = [
   { key: 'kpis', label: 'KPI Assign' },
   { key: 'tasks', label: 'Task Tracker' },
   { key: 'ethics', label: 'Ethics Review' },
+  { key: 'settings', label: 'Settings' },
 ];
 
 export default function TeamPage() {
@@ -38,6 +40,7 @@ export default function TeamPage() {
       {tab === 'kpis' && <KpiAssign />}
       {tab === 'tasks' && <TaskTracker />}
       {tab === 'ethics' && <EthicsReviewTab />}
+      {tab === 'settings' && <PerformanceSettings />}
     </Shell>
   );
 }

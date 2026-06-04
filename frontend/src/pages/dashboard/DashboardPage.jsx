@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { CalendarPlus, FolderOpen, TrendingUp, Bell, BarChart2, ListChecks } from 'lucide-react';
+import { CalendarPlus, Calendar, TrendingUp, Bell, BarChart2, ListChecks } from 'lucide-react';
 import Shell from '../../components/layout/Shell';
 import api from '../../api/axios';
 import TasksDuePanel from '../../components/TasksDuePanel';
@@ -183,10 +183,6 @@ export default function DashboardPage() {
   const perfColor = performance ? scoreColor(performance.overallScore) : '#15161A';
   const unread = notifMeta?.unread ?? 0;
 
-  const handleDocsNav = () => {
-    if (user?.role === 'HR_MANAGER' && user?.id) navigate(`/employees/${user.id}`);
-  };
-
   return (
     <Shell>
       <style>{shimmerStyle}</style>
@@ -264,9 +260,9 @@ export default function DashboardPage() {
           <CalendarPlus size={20} style={{ color: '#C8203D' }} />
           <span style={{ fontSize: 14, fontWeight: 500, color: '#15161A' }}>Request Leave</span>
         </button>
-        <button className="qa-card" onClick={handleDocsNav} disabled={user?.role !== 'HR_MANAGER'} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', background: '#fff', border: '1px solid #E4E3DC', borderRadius: 12, cursor: user?.role === 'HR_MANAGER' ? 'pointer' : 'not-allowed', textAlign: 'left', fontFamily: 'inherit', opacity: user?.role === 'HR_MANAGER' ? 1 : 0.55 }}>
-          <FolderOpen size={20} style={{ color: '#C8203D' }} />
-          <span style={{ fontSize: 14, fontWeight: 500, color: '#15161A' }}>View Documents</span>
+        <button className="qa-card" onClick={() => navigate('/calendar')} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', background: '#fff', border: '1px solid #E4E3DC', borderRadius: 12, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+          <Calendar size={20} style={{ color: '#C8203D' }} />
+          <span style={{ fontSize: 14, fontWeight: 500, color: '#15161A' }}>Company Calendar</span>
         </button>
         <button className="qa-card" onClick={() => navigate('/performance')} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', background: '#fff', border: '1px solid #E4E3DC', borderRadius: 12, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
           <TrendingUp size={20} style={{ color: '#C8203D' }} />
