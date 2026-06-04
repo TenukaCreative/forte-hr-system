@@ -1,4 +1,5 @@
 import { createContext, useContext, useState } from 'react';
+import { loginWithAzure, logoutFromAzure } from '../auth/authService';
 
 const AuthContext = createContext(null);
 
@@ -9,18 +10,24 @@ export function AuthProvider({ children }) {
     return stored ? JSON.parse(stored) : null;
   });
 
-  const login = (newToken, newUser) => {
+  const login = async () => {
+    const { token: newToken, user: newUser } = await loginWithAzure();
     localStorage.setItem('forte_token', newToken);
     localStorage.setItem('forte_user', JSON.stringify(newUser));
     setToken(newToken);
     setUser(newUser);
   };
 
-  const logout = () => {
+  const logout = async () => {
     localStorage.removeItem('forte_token');
     localStorage.removeItem('forte_user');
     setToken(null);
     setUser(null);
+    try {
+      await logoutFromAzure();
+    } catch {
+      // MSAL logout failure must not block local state being cleared
+    }
   };
 
   return (

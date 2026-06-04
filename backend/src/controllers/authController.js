@@ -1,66 +1,115 @@
 const jwt = require('jsonwebtoken');
-const { User } = require('../models');
+const axios = require('axios');
+const { User, Employee } = require('../models');
 
-// DEV ONLY — remove before production
-const devLogin = async (req, res, next) => {
+const getGraphProfile = async (accessToken) => {
+  const { data } = await axios.get(
+    `${process.env.GRAPH_API_ENDPOINT}/me`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      params: {
+        $select: 'id,displayName,mail,userPrincipalName,jobTitle,department',
+      },
+    }
+  );
+  return data;
+};
+
+const issueJwt = (user) => {
+  const payload = { id: user.id, email: user.email, name: user.name, role: user.role };
+  return {
+    token: jwt.sign(payload, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+    }),
+    user: payload,
+  };
+};
+
+const microsoftCallback = async (req, res, next) => {
   try {
-    const { email } = req.body;
+    const { accessToken } = req.body;
+    if (!accessToken) {
+      return res.status(400).json({ message: 'Access token is required.' });
+    }
 
-    const user = await User.findOne({ where: { email } });
+    let profile;
+    try {
+      profile = await getGraphProfile(accessToken);
+    } catch (err) {
+      console.error('MS Graph error:', err.response?.data || err.message);
+      return res.status(401).json({ message: 'Invalid or expired Azure AD token.' });
+    }
 
+    const azureId = profile.id;
+    const email = profile.mail || profile.userPrincipalName;
+    const name = profile.displayName;
+    const designation = profile.jobTitle || null;
+    const department = profile.department || null;
+
+    if (!azureId || !email) {
+      return res.status(400).json({ message: 'Incomplete profile from Azure AD.' });
+    }
+
+    let user = await User.findOne({ where: { azureId } });
     if (!user) {
-      return res.status(401).json({ message: 'Access denied. Contact IT.' });
+      user = await User.create({
+        azureId,
+        email,
+        name,
+        isActive: true,
+        role: null,
+      });
+      console.log(`New user provisioned from AD: ${email}`);
+    } else {
+      await user.update({ email, name });
     }
 
     if (!user.isActive) {
-      return res.status(401).json({ message: 'Account deactivated.' });
+      return res.status(403).json({ message: 'Account deactivated. Contact IT.' });
     }
 
-    const payload = { id: user.id, email: user.email, name: user.name, role: user.role };
+    const existingEmployee = await Employee.findOne({ where: { userId: user.id } });
+    if (existingEmployee) {
+      const adUpdates = {};
+      if (designation && existingEmployee.designation !== designation) adUpdates.designation = designation;
+      if (department && existingEmployee.department !== department) adUpdates.department = department;
+      if (Object.keys(adUpdates).length > 0) {
+        await existingEmployee.update(adUpdates);
+        console.log(`Employee record synced from AD for: ${email}`);
+      }
+    } else {
+      await Employee.create({
+        userId: user.id,
+        employeeCode: `PENDING-${user.id.slice(0, 8)}`,
+        designation,
+        department,
+      });
+      console.log(`Employee record auto-created on first login for: ${email}`);
+    }
 
-    const token = jwt.sign(payload, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-    });
-
-    return res.json({ token, user: payload });
+    const { token, user: userPayload } = issueJwt(user);
+    return res.json({ token, user: userPayload });
   } catch (err) {
     next(err);
   }
 };
 
-// POST /api/auth/microsoft/callback
-// Receives the Azure AD token from the frontend after MSAL redirect.
-// Extracts email, name, and role from the AD token claims,
-// then finds or creates the user record by azureId.
-// Role is intentionally NOT stored in the DB — it comes from AD on every login.
-const microsoftCallback = async (req, res, next) => {
-  try {
-    // TODO: implement when AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET
-    // are provided by Forte IT. Steps:
-    //   1. Validate the incoming AD token with MSAL / passport-azure-ad
-    //   2. Destructure: { oid: azureId, email, name, roles } from token claims
-    //   3. const [user] = await User.findOrCreate({
-    //        where: { azureId },
-    //        defaults: { azureId, email, name, isActive: true },
-    //      });
-    //   4. If user.email changed, update it (AD is source of truth)
-    //   5. Issue JWT: { id, email, name, role } where role = roles[0] from AD
-    res.status(501).json({ message: 'Azure AD SSO not yet configured' });
-  } catch (err) {
-    next(err);
-  }
-};
-
-// GET /api/auth/me
-// Role/id/email come from the JWT, but name is pulled fresh from the DB so it
-// reflects HR edits made after the user's last login (the JWT name is stale).
 const me = async (req, res, next) => {
   try {
-    const dbUser = await User.findByPk(req.user.id, { attributes: ['name'] });
-    res.json({ ...req.user, name: dbUser?.name ?? req.user.name });
+    const dbUser = await User.findByPk(req.user.id, {
+      attributes: ['name', 'role', 'isActive'],
+    });
+    if (!dbUser || !dbUser.isActive) {
+      return res.status(403).json({ message: 'Account deactivated. Contact IT.' });
+    }
+    res.json({
+      ...req.user,
+      name: dbUser.name ?? req.user.name,
+      role: dbUser.role ?? req.user.role,
+    });
   } catch (err) {
     next(err);
   }
 };
 
-module.exports = { devLogin, microsoftCallback, me };
+module.exports = { microsoftCallback, me };
