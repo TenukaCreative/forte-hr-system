@@ -2,14 +2,18 @@ import { msalInstance, loginRequest } from './msalConfig';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
-export const loginWithAzure = async () => {
-  await msalInstance.initialize();
-  const msalResponse = await msalInstance.loginPopup(loginRequest);
-  msalInstance.setActiveAccount(msalResponse.account);
+// Call this on app startup to handle the redirect coming back from Microsoft.
+export const handleRedirectResult = async () => {
+  const result = await msalInstance.handleRedirectPromise();
+
+  // No redirect response — normal page load.
+  if (!result) return null;
+
+  msalInstance.setActiveAccount(result.account);
 
   const tokenResponse = await msalInstance.acquireTokenSilent({
     ...loginRequest,
-    account: msalResponse.account,
+    account: result.account,
   });
 
   const backendResponse = await fetch(`${API_BASE}/auth/microsoft/callback`, {
@@ -27,10 +31,16 @@ export const loginWithAzure = async () => {
   return { token, user };
 };
 
+// Initiates login — redirects the whole page to Microsoft.
+export const loginWithAzure = async () => {
+  await msalInstance.loginRedirect(loginRequest);
+  // Page redirects away — nothing after this runs.
+};
+
 export const logoutFromAzure = async () => {
-  await msalInstance.initialize();
   const account = msalInstance.getActiveAccount();
-  if (account) {
-    await msalInstance.logoutPopup({ account });
-  }
+  await msalInstance.logoutRedirect({
+    account,
+    postLogoutRedirectUri: window.location.origin,
+  });
 };

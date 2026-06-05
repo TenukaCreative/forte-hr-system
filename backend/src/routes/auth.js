@@ -7,3 +7,4 @@ router.post('/microsoft/callback', microsoftCallback);
 router.get('/me', auth, me);
 
 module.exports = router;
+    

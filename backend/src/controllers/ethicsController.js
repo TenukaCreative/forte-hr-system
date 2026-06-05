@@ -1,4 +1,5 @@
 const { EthicsReview, Employee, User, KPI, Notification } = require('../models');
+const { sendEmail, templates } = require('../services/emailService');
 
 // Weighted ethics score out of 100 (Performance 80 + Behavioral 20).
 const calcEthicsScore = (data) => parseFloat((
@@ -31,7 +32,7 @@ const createOrUpdateEthicsReview = async (req, res, next) => {
     }
 
     const employee = await Employee.findByPk(employeeId, {
-      include: [{ model: User, attributes: ['id', 'name'] }],
+      include: [{ model: User, attributes: ['id', 'name', 'email'] }],
     });
     if (!employee) return res.status(404).json({ message: 'Employee not found' });
 
@@ -60,6 +61,14 @@ const createOrUpdateEthicsReview = async (req, res, next) => {
         userId: employee.User.id,
         message: `Your ethics review for ${period} has been submitted. Score: ${ethicsScore}/100`,
       });
+    }
+
+    // Email the reviewed employee (best-effort).
+    try {
+      const tpl = templates.ethicsReview(employee.User?.name, period, ethicsScore);
+      await sendEmail({ senderId: req.user.id, toEmail: employee.User?.email, subject: tpl.subject, bodyHtml: tpl.bodyHtml });
+    } catch (err) {
+      console.error('Ethics review email failed:', err.message);
     }
 
     res.status(201).json(review);

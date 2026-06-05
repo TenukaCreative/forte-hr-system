@@ -6,10 +6,11 @@ export const msalConfig = {
     authority: `https://login.microsoftonline.com/${import.meta.env.VITE_AZURE_TENANT_ID}`,
     redirectUri: import.meta.env.VITE_REDIRECT_URI || window.location.origin,
     postLogoutRedirectUri: window.location.origin,
+    navigateToLoginRequestUrl: false,
   },
   cache: {
     cacheLocation: 'localStorage',
-    storeAuthStateInCookie: false,
+    storeAuthStateInCookie: true,
   },
   system: {
     loggerOptions: {
@@ -23,7 +24,12 @@ export const msalConfig = {
 };
 
 export const loginRequest = {
-  scopes: ['openid', 'profile', 'email', 'User.Read'],
+  scopes: [
+    'openid',
+    'profile',
+    'email',
+    'User.Read',
+  ],
 };
 
 export const msalInstance = new PublicClientApplication(msalConfig);

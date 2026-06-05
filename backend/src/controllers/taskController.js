@@ -1,4 +1,5 @@
 const { Task, KPI, Employee, User, Notification } = require('../models');
+const { sendEmail, templates } = require('../services/emailService');
 
 // POST /api/tasks — add a task under a KPI
 const createTask = async (req, res, next) => {
@@ -7,7 +8,7 @@ const createTask = async (req, res, next) => {
     if (!kpiId || !title) return res.status(400).json({ message: 'kpiId and title are required' });
 
     const kpi = await KPI.findByPk(kpiId, {
-      include: [{ model: Employee, include: [{ model: User, attributes: ['id', 'name'] }] }],
+      include: [{ model: Employee, include: [{ model: User, attributes: ['id', 'name', 'email'] }] }],
     });
     if (!kpi) return res.status(404).json({ message: 'KPI not found' });
 
@@ -19,6 +20,14 @@ const createTask = async (req, res, next) => {
         userId: memberUserId,
         message: `New task: ${title} under ${kpi.title}.${deadline ? ` Due ${deadline}` : ''}`,
       });
+    }
+
+    // Email the assignee (best-effort).
+    try {
+      const tpl = templates.taskAssigned(title, kpi.title, deadline || '—');
+      await sendEmail({ senderId: req.user.id, toEmail: kpi.Employee?.User?.email, subject: tpl.subject, bodyHtml: tpl.bodyHtml });
+    } catch (err) {
+      console.error('Task assigned email failed:', err.message);
     }
 
     res.status(201).json(task);

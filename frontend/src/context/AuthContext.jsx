@@ -11,11 +11,9 @@ export function AuthProvider({ children }) {
   });
 
   const login = async () => {
-    const { token: newToken, user: newUser } = await loginWithAzure();
-    localStorage.setItem('forte_token', newToken);
-    localStorage.setItem('forte_user', JSON.stringify(newUser));
-    setToken(newToken);
-    setUser(newUser);
+    // Redirects the page away to Microsoft — no return value.
+    // Token/user are set in main.jsx once the redirect returns.
+    await loginWithAzure();
   };
 
   const logout = async () => {

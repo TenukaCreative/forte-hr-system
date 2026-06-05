@@ -23,6 +23,7 @@ function datesInRange(start, end) {
 
 export default function CompanyCalendar() {
   const [leaves, setLeaves] = useState([]);
+  const [outlookEvents, setOutlookEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [today] = useState(new Date());
   const [viewDate, setViewDate] = useState(new Date());
@@ -32,6 +33,12 @@ export default function CompanyCalendar() {
       .then((r) => setLeaves(r.data.filter((l) => l.status === 'APPROVED')))
       .catch(() => toast.error('Failed to load calendar'))
       .finally(() => setLoading(false));
+
+    // Outlook events are a bonus layer — fail silently so the calendar
+    // still renders leaves if the user hasn't granted calendar access.
+    api.get('/calendar/outlook')
+      .then((r) => setOutlookEvents(r.data || []))
+      .catch(() => {});
   }, []);
 
   const year  = viewDate.getFullYear();
@@ -45,6 +52,14 @@ export default function CompanyCalendar() {
       if (!leaveMap[d]) leaveMap[d] = [];
       leaveMap[d].push(l);
     });
+  });
+
+  const outlookMap = {};
+  outlookEvents.forEach((e) => {
+    const d = (e.start || '').slice(0, 10);
+    if (!d) return;
+    if (!outlookMap[d]) outlookMap[d] = [];
+    outlookMap[d].push(e);
   });
 
   const prev = () => setViewDate(new Date(year, month - 1, 1));
@@ -88,6 +103,7 @@ export default function CompanyCalendar() {
             if (!day) return <div key={`empty-${i}`} style={{ minHeight: 72 }} />;
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const dayLeaves = leaveMap[dateStr] || [];
+            const dayOutlook = outlookMap[dateStr] || [];
             const isToday = dateStr === today.toISOString().slice(0, 10);
             return (
               <div
@@ -124,9 +140,44 @@ export default function CompanyCalendar() {
                 {dayLeaves.length > 3 && (
                   <div style={{ fontSize: 10, color: 'rgba(21,22,26,0.4)', marginTop: 2 }}>+{dayLeaves.length - 3} more</div>
                 )}
+                {dayOutlook.slice(0, 2).map((e, idx) => (
+                  <div
+                    key={`o-${e.id || idx}`}
+                    title={e.title}
+                    style={{
+                      marginTop: 3,
+                      borderRadius: 3,
+                      padding: '2px 5px',
+                      fontSize: 10,
+                      fontWeight: 500,
+                      background: '#EEF2FF',
+                      color: '#3730A3',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {e.title || 'Event'}
+                  </div>
+                ))}
+                {dayOutlook.length > 2 && (
+                  <div style={{ fontSize: 10, color: 'rgba(21,22,26,0.4)', marginTop: 2 }}>+{dayOutlook.length - 2} more</div>
+                )}
               </div>
             );
           })}
+        </div>
+
+        {/* Legend */}
+        <div style={{ display: 'flex', gap: 16, marginTop: 16, fontSize: 12, color: 'rgba(21,22,26,0.6)' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 12, height: 12, background: '#D1FAE5', borderRadius: 3 }} />
+            Approved Leave
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 12, height: 12, background: '#EEF2FF', borderRadius: 3 }} />
+            Outlook Event
+          </span>
         </div>
       </div>
     </Shell>

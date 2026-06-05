@@ -3,9 +3,46 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { Upload, Trash2, FileText, ArrowLeft } from 'lucide-react';
 import Shell from '../../components/layout/Shell';
+import { formatDate } from '../../components/theme';
 import api from '../../api/axios';
 
 const DEPARTMENTS = ['IT', 'HR', 'PMO', 'Finance', 'Operations'];
+
+// Values must match the User.role ENUM in the backend
+// (backend/src/models/User.js) — the rest of the app routes off these codes.
+const ROLES = [
+  { value: 'HR_MANAGER',  label: 'HR Manager' },
+  { value: 'HEAD_OF_PMO', label: 'Head of PMO' },
+  { value: 'PM',          label: 'Project Manager' },
+  { value: 'BA',          label: 'Business Analyst' },
+  { value: 'IT',          label: 'IT Officer' },
+  { value: 'SUPER_ADMIN', label: 'Super Admin' },
+];
+
+const roleLabel = (value) =>
+  ROLES.find((r) => r.value === value)?.label || value?.replace(/_/g, ' ');
+
+const subLabel = {
+  fontSize: 11, fontWeight: 600, color: 'rgba(21,22,26,0.4)',
+  letterSpacing: '0.8px', margin: '0 0 12px',
+};
+
+const rolePill = {
+  background: 'rgba(200,32,61,0.08)', color: '#C8203D',
+  borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600,
+};
+
+const infoPill = {
+  background: '#F5F4EF', color: '#5a5b61',
+  borderRadius: 20, padding: '3px 10px', fontSize: 12,
+};
+
+const formatSize = (bytes) => {
+  if (bytes == null) return null;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 export default function EmployeeDetailPage() {
   const { userId } = useParams();
@@ -23,6 +60,7 @@ export default function EmployeeDetailPage() {
 
   const [form, setForm] = useState({
     name: '',
+    role: '',
     employeeCode: '', department: '', designation: '',
     joinDate: '', contactNumber: '', address: '',
     emergencyContact: '', emergencyPhone: '',
@@ -39,6 +77,7 @@ export default function EmployeeDetailPage() {
       if (data.employee) {
         setForm({
           name:            data.user?.name || '',
+          role:            data.user?.role || '',
           employeeCode:    data.employee.employeeCode || '',
           department:      data.employee.department || '',
           designation:     data.employee.designation || '',
@@ -49,8 +88,8 @@ export default function EmployeeDetailPage() {
           emergencyPhone:  data.employee.emergencyPhone || '',
         });
       } else {
-        // No employee record yet — still seed the name from the user account.
-        setForm((prev) => ({ ...prev, name: data.user?.name || '' }));
+        // No employee record yet — still seed name and role from the user account.
+        setForm((prev) => ({ ...prev, name: data.user?.name || '', role: data.user?.role || '' }));
       }
     } catch { toast.error('Failed to load employee'); }
     finally { setLoading(false); }
@@ -110,78 +149,224 @@ export default function EmployeeDetailPage() {
 
   if (loading) return <Shell><div className="spinner-full"><div className="spinner" /></div></Shell>;
 
+  const initials = userData?.name
+    ? userData.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+    : '??';
+
   return (
     <Shell>
-      <div className="page-header">
-        <div>
-          <button className="btn-ghost" style={{ marginBottom: 8, paddingLeft: 0 }} onClick={() => navigate('/employees')}>
-            <ArrowLeft size={15} /> Back to employees
-          </button>
-          <h1>{userData?.name}</h1>
-          <p>{userData?.email} · <span style={{ textTransform: 'uppercase', fontSize: 12, fontWeight: 600 }}>{userData?.role?.replace(/_/g, ' ')}</span></p>
+      <style>{`
+        .emp-detail-grid {
+          display: grid;
+          grid-template-columns: 1.4fr 1fr;
+          gap: 24px;
+          align-items: start;
+        }
+        @media (max-width: 900px) {
+          .emp-detail-grid { grid-template-columns: 1fr; }
+        }
+        .forte-group { margin-bottom: 16px; }
+        .forte-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+        @media (max-width: 600px) {
+          .forte-row { grid-template-columns: 1fr; }
+        }
+        .forte-label {
+          display: block;
+          font-size: 12px;
+          font-weight: 600;
+          color: rgba(21,22,26,0.55);
+          margin-bottom: 5px;
+          letter-spacing: 0.2px;
+        }
+        .forte-input {
+          width: 100%;
+          padding: 9px 12px;
+          border: 1.5px solid #E4E3DC;
+          border-radius: 8px;
+          font-size: 14px;
+          font-family: Inter, sans-serif;
+          color: #15161A;
+          background: #FAFAF7;
+          outline: none;
+          transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+          box-sizing: border-box;
+        }
+        .forte-input:focus {
+          border-color: #C8203D;
+          box-shadow: 0 0 0 3px rgba(200,32,61,0.08);
+          background: #FFFFFF;
+        }
+        .forte-input::placeholder { color: rgba(21,22,26,0.3); }
+        .forte-input:disabled, .forte-input[readonly] {
+          background: #F5F4EF;
+          color: rgba(21,22,26,0.5);
+          cursor: not-allowed;
+        }
+        .forte-select {
+          width: 100%;
+          padding: 9px 12px;
+          border: 1.5px solid #E4E3DC;
+          border-radius: 8px;
+          font-size: 14px;
+          font-family: Inter, sans-serif;
+          color: #15161A;
+          background: #FAFAF7;
+          outline: none;
+          cursor: pointer;
+          appearance: auto;
+          transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+          box-sizing: border-box;
+        }
+        .forte-select:focus {
+          border-color: #C8203D;
+          box-shadow: 0 0 0 3px rgba(200,32,61,0.08);
+          background: #FFFFFF;
+        }
+        .forte-select:disabled {
+          background: #F5F4EF;
+          color: rgba(21,22,26,0.5);
+          cursor: not-allowed;
+        }
+        .forte-textarea {
+          width: 100%;
+          padding: 9px 12px;
+          border: 1.5px solid #E4E3DC;
+          border-radius: 8px;
+          font-size: 14px;
+          font-family: Inter, sans-serif;
+          color: #15161A;
+          background: #FAFAF7;
+          outline: none;
+          resize: vertical;
+          min-height: 80px;
+          transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+          box-sizing: border-box;
+        }
+        .forte-textarea:focus {
+          border-color: #C8203D;
+          box-shadow: 0 0 0 3px rgba(200,32,61,0.08);
+          background: #FFFFFF;
+        }
+        .forte-textarea::placeholder { color: rgba(21,22,26,0.3); }
+      `}</style>
+
+      {/* Section 1 — Header card */}
+      <div
+        className="card"
+        style={{ marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 0 }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: '50%', background: '#C8203D', color: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 22, fontWeight: 700, flexShrink: 0, letterSpacing: '0.02em',
+          }}>
+            {initials}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>{userData?.name}</h1>
+            <p style={{ margin: '2px 0 0', fontSize: 14, color: 'rgba(21,22,26,0.5)' }}>{userData?.email}</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+              {userData?.role && <span style={rolePill}>{roleLabel(userData.role)}</span>}
+              {employee?.employeeCode && <span style={infoPill}>{employee.employeeCode}</span>}
+              {employee?.department && <span style={infoPill}>{employee.department}</span>}
+              {employee?.joinDate && <span style={infoPill}>Joined {formatDate(employee.joinDate)}</span>}
+            </div>
+          </div>
         </div>
+        <button className="btn-ghost" style={{ alignSelf: 'flex-start', flexShrink: 0 }} onClick={() => navigate('/employees')}>
+          <ArrowLeft size={15} /> Back to employees
+        </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, alignItems: 'start' }}>
+      {/* Section 2 — Two columns */}
+      <div className="emp-detail-grid">
 
-        {/* Profile form */}
+        {/* Left — Profile form */}
         <div className="card">
           <h3 className="section-title">Employee Profile</h3>
           <form onSubmit={handleSave}>
-            <div className="form-group">
-              <label className="form-label">Full Name *</label>
-              <input className="form-input" value={form.name} onChange={f('name')} required placeholder="e.g. John Smith" />
+            <p style={subLabel}>PERSONAL INFORMATION</p>
+            <div className="forte-group">
+              <label className="forte-label">Full Name<span style={{ color: '#C8203D', marginLeft: 2 }}>*</span></label>
+              <input className="forte-input" value={form.name} onChange={f('name')} required placeholder="e.g. John Smith" />
             </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Employee Code *</label>
-                <input className="form-input" value={form.employeeCode} onChange={f('employeeCode')} required placeholder="e.g. FT-001" />
+            <div className="forte-group">
+              <label className="forte-label">System Role</label>
+              <select className="forte-select" value={form.role} onChange={f('role')}>
+                <option value="">Select role…</option>
+                {ROLES.map((r) => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="forte-row">
+              <div className="forte-group">
+                <label className="forte-label">Employee Code<span style={{ color: '#C8203D', marginLeft: 2 }}>*</span></label>
+                <input className="forte-input" value={form.employeeCode} onChange={f('employeeCode')} required placeholder="e.g. FT-001" />
               </div>
-              <div className="form-group">
-                <label className="form-label">Department</label>
-                <select className="form-select" value={form.department} onChange={f('department')}>
+              <div className="forte-group">
+                <label className="forte-label">Department</label>
+                <select className="forte-select" value={form.department} onChange={f('department')}>
                   <option value="">Select…</option>
                   {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
             </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Designation</label>
-                <input className="form-input" value={form.designation} onChange={f('designation')} placeholder="e.g. Software Engineer" />
+            <div className="forte-row">
+              <div className="forte-group">
+                <label className="forte-label">Designation</label>
+                <input className="forte-input" value={form.designation} onChange={f('designation')} placeholder="e.g. Software Engineer" />
               </div>
-              <div className="form-group">
-                <label className="form-label">Join Date</label>
-                <input type="date" className="form-input" value={form.joinDate} onChange={f('joinDate')} />
-              </div>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Contact Number</label>
-              <input className="form-input" value={form.contactNumber} onChange={f('contactNumber')} placeholder="+94 77 000 0000" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Address</label>
-              <textarea className="form-textarea" value={form.address} onChange={f('address')} placeholder="Home address" />
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Emergency Contact</label>
-                <input className="form-input" value={form.emergencyContact} onChange={f('emergencyContact')} placeholder="Contact name" />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Emergency Phone</label>
-                <input className="form-input" value={form.emergencyPhone} onChange={f('emergencyPhone')} placeholder="+94 77 000 0000" />
+              <div className="forte-group">
+                <label className="forte-label">Join Date</label>
+                <input type="date" className="forte-input" value={form.joinDate} onChange={f('joinDate')} />
               </div>
             </div>
-            <button type="submit" className="btn-primary" disabled={saving} style={{ width: '100%', justifyContent: 'center' }}>
+            <div className="forte-group">
+              <label className="forte-label">Contact Number</label>
+              <input className="forte-input" value={form.contactNumber} onChange={f('contactNumber')} placeholder="+94 77 000 0000" />
+            </div>
+            <div className="forte-group">
+              <label className="forte-label">Address</label>
+              <textarea className="forte-textarea" value={form.address} onChange={f('address')} placeholder="Home address" />
+            </div>
+
+            <hr style={{ border: 'none', borderTop: '1px solid #E4E3DC', margin: '20px 0' }} />
+
+            <p style={subLabel}>EMERGENCY CONTACT</p>
+            <div className="forte-row">
+              <div className="forte-group">
+                <label className="forte-label">Emergency Contact</label>
+                <input className="forte-input" value={form.emergencyContact} onChange={f('emergencyContact')} placeholder="Contact name" />
+              </div>
+              <div className="forte-group">
+                <label className="forte-label">Emergency Phone</label>
+                <input className="forte-input" value={form.emergencyPhone} onChange={f('emergencyPhone')} placeholder="+94 77 000 0000" />
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={saving}
+              style={{
+                width: '100%', background: '#C8203D', color: '#fff',
+                borderRadius: 8, padding: 12, fontWeight: 600, fontSize: 14,
+                border: 'none', cursor: saving ? 'not-allowed' : 'pointer',
+                marginTop: 8, opacity: saving ? 0.6 : 1, fontFamily: 'inherit',
+              }}
+            >
               {saving ? 'Saving…' : (employee ? 'Update Profile' : 'Create Profile')}
             </button>
           </form>
         </div>
 
-        {/* Documents */}
+        {/* Right — Documents */}
         <div className="card">
-          <h3 className="section-title">Documents</h3>
+          <h3 className="section-title">Documents ({documents.length})</h3>
 
           {/* Drop zone */}
           {employee ? (
@@ -251,6 +436,7 @@ export default function EmployeeDetailPage() {
                     <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: '#15161A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.fileName}</p>
                     <p style={{ margin: 0, fontSize: 11, color: 'rgba(21,22,26,0.4)' }}>
                       {new Date(doc.uploadedAt).toLocaleDateString()}
+                      {formatSize(doc.fileSize) && ` · ${formatSize(doc.fileSize)}`}
                     </p>
                   </div>
                   <button className="btn-ghost" style={{ padding: '4px 8px', fontSize: 12 }} onClick={() => handleDownload(doc.id)}>Download</button>
@@ -263,8 +449,6 @@ export default function EmployeeDetailPage() {
           )}
         </div>
       </div>
-
-      <style>{`@media(max-width:900px){.emp-detail-grid{grid-template-columns:1fr!important}}`}</style>
     </Shell>
   );
 }

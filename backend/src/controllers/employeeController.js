@@ -75,9 +75,13 @@ const createEmployee = async (req, res, next) => {
     const existing = await Employee.findOne({ where: { userId } });
     if (existing) return res.status(400).json({ message: 'Employee record already exists for this user' });
 
-    const { name, employeeCode, department, designation, joinDate, contactNumber, address, emergencyContact, emergencyPhone } = req.body;
-    if (name) {
-      await User.update({ name }, { where: { id: userId } });
+    const { name, role, employeeCode, department, designation, joinDate, contactNumber, address, emergencyContact, emergencyPhone } = req.body;
+
+    const userUpdates = {};
+    if (name) userUpdates.name = name;
+    if (role) userUpdates.role = role;
+    if (Object.keys(userUpdates).length) {
+      await User.update(userUpdates, { where: { id: userId } });
     }
     const employee = await Employee.create({ userId, employeeCode, department, designation, joinDate, contactNumber, address, emergencyContact, emergencyPhone });
 
@@ -93,9 +97,13 @@ const updateEmployee = async (req, res, next) => {
     const employee = await Employee.findOne({ where: { userId } });
     if (!employee) return res.status(404).json({ message: 'Employee record not found' });
 
-    const { name, employeeCode, department, designation, joinDate, contactNumber, address, emergencyContact, emergencyPhone } = req.body;
-    if (name) {
-      await User.update({ name }, { where: { id: userId } });
+    const { name, role, employeeCode, department, designation, joinDate, contactNumber, address, emergencyContact, emergencyPhone } = req.body;
+
+    const userUpdates = {};
+    if (name) userUpdates.name = name;
+    if (role) userUpdates.role = role;
+    if (Object.keys(userUpdates).length) {
+      await User.update(userUpdates, { where: { id: userId } });
     }
     await employee.update({ employeeCode, department, designation, joinDate, contactNumber, address, emergencyContact, emergencyPhone });
 

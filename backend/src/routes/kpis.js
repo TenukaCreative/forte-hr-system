@@ -11,7 +11,7 @@ const {
 const auth = require('../middleware/auth');
 const { authorize } = require('../middleware/rbac');
 
-const pmoOnly = authorize('HEAD_OF_PMO');
+const pmoOnly = authorize('HEAD_OF_PMO', 'SUPER_ADMIN');
 
 // Specific routes before dynamic /:kpiId routes
 router.get('/my-team', auth, pmoOnly, getMyTeamKpis);

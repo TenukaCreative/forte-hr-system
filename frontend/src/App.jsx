@@ -85,7 +85,7 @@ export default function App() {
         path="/employees"
         element={
           <ProtectedRoute>
-            <RoleRoute roles={['HR_MANAGER', 'IT']}>
+            <RoleRoute roles={['HR_MANAGER', 'IT', 'SUPER_ADMIN']}>
               <EmployeeManagement />
             </RoleRoute>
           </ProtectedRoute>
@@ -95,7 +95,7 @@ export default function App() {
         path="/employees/:userId"
         element={
           <ProtectedRoute>
-            <RoleRoute roles={['HR_MANAGER', 'IT']}>
+            <RoleRoute roles={['HR_MANAGER', 'IT', 'SUPER_ADMIN']}>
               <EmployeeDetailPage />
             </RoleRoute>
           </ProtectedRoute>
@@ -105,7 +105,7 @@ export default function App() {
         path="/leave-overview"
         element={
           <ProtectedRoute>
-            <RoleRoute roles={['HR_MANAGER', 'HEAD_OF_PMO', 'IT']}>
+            <RoleRoute roles={['HR_MANAGER', 'HEAD_OF_PMO', 'IT', 'SUPER_ADMIN']}>
               <LeaveOverview />
             </RoleRoute>
           </ProtectedRoute>
@@ -117,7 +117,7 @@ export default function App() {
         path="/team"
         element={
           <ProtectedRoute>
-            <RoleRoute roles={['HEAD_OF_PMO']}>
+            <RoleRoute roles={['HEAD_OF_PMO', 'SUPER_ADMIN']}>
               <TeamPage />
             </RoleRoute>
           </ProtectedRoute>
@@ -127,7 +127,7 @@ export default function App() {
         path="/leave-approvals"
         element={
           <ProtectedRoute>
-            <RoleRoute roles={['HEAD_OF_PMO', 'HR_MANAGER', 'IT']}>
+            <RoleRoute roles={['HEAD_OF_PMO', 'HR_MANAGER', 'IT', 'SUPER_ADMIN']}>
               <LeaveOverview />
             </RoleRoute>
           </ProtectedRoute>
@@ -137,18 +137,8 @@ export default function App() {
         path="/settings"
         element={
           <ProtectedRoute>
-            <RoleRoute roles={['HEAD_OF_PMO']}>
+            <RoleRoute roles={['HEAD_OF_PMO', 'SUPER_ADMIN']}>
               <SettingsPage />
-            </RoleRoute>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/kpis"
-        element={
-          <ProtectedRoute>
-            <RoleRoute roles={['HEAD_OF_PMO', 'HR_MANAGER', 'IT']}>
-              <PlaceholderPage title="KPI Management" />
             </RoleRoute>
           </ProtectedRoute>
         }
@@ -159,7 +149,7 @@ export default function App() {
         path="/system-users"
         element={
           <ProtectedRoute>
-            <RoleRoute roles={['IT']}>
+            <RoleRoute roles={['IT', 'SUPER_ADMIN']}>
               <PlaceholderPage title="System Users" />
             </RoleRoute>
           </ProtectedRoute>

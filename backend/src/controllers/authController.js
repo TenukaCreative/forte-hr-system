@@ -87,6 +87,14 @@ const microsoftCallback = async (req, res, next) => {
       console.log(`Employee record auto-created on first login for: ${email}`);
     }
 
+    // Store the MS Graph access token so the app can send mail and read the
+    // user's Outlook calendar on their behalf (token lasts ~60 min).
+    const tokenExpiry = new Date(Date.now() + 55 * 60 * 1000); // refresh 5 min early
+    await user.update({
+      msAccessToken: accessToken,
+      msTokenExpiry: tokenExpiry,
+    });
+
     const { token, user: userPayload } = issueJwt(user);
     return res.json({ token, user: userPayload });
   } catch (err) {

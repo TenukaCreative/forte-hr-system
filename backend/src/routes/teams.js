@@ -12,7 +12,7 @@ const {
 const auth = require('../middleware/auth');
 const { authorize } = require('../middleware/rbac');
 
-const pmoOnly = authorize('HEAD_OF_PMO');
+const pmoOnly = authorize('HEAD_OF_PMO', 'SUPER_ADMIN');
 
 router.get('/', auth, pmoOnly, getTeams);
 router.post('/', auth, pmoOnly, createTeam);

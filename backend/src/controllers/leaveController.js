@@ -1,4 +1,5 @@
 const { LeaveRequest, Employee, User, Notification } = require('../models');
+const { sendEmail, templates } = require('../services/emailService');
 
 const requestLeave = async (req, res, next) => {
   try {
@@ -30,6 +31,18 @@ const requestLeave = async (req, res, next) => {
         })
       )
     );
+
+    // Email the PMO reviewers (best-effort — never blocks the request).
+    try {
+      const tpl = templates.leaveSubmitted(req.user.name, startDate, endDate, leaveType);
+      await Promise.all(
+        pmoUsers.map((u) =>
+          sendEmail({ senderId: req.user.id, toEmail: u.email, subject: tpl.subject, bodyHtml: tpl.bodyHtml })
+        )
+      );
+    } catch (err) {
+      console.error('Leave submitted email failed:', err.message);
+    }
 
     res.status(201).json(leave);
   } catch (err) {
@@ -73,7 +86,7 @@ const getAllLeaves = async (req, res, next) => {
 const approveLeave = async (req, res, next) => {
   try {
     const leave = await LeaveRequest.findByPk(req.params.id, {
-      include: [{ model: Employee, include: [{ model: User, attributes: ['id', 'name'] }] }],
+      include: [{ model: Employee, include: [{ model: User, attributes: ['id', 'name', 'email'] }] }],
     });
     if (!leave) return res.status(404).json({ message: 'Leave request not found' });
     if (leave.status !== 'PENDING') return res.status(400).json({ message: 'Can only approve pending requests' });
@@ -87,6 +100,14 @@ const approveLeave = async (req, res, next) => {
       });
     }
 
+    // Email the employee the decision (best-effort).
+    try {
+      const tpl = templates.leaveDecision('APPROVED', leave.startDate, leave.endDate, req.body?.note || null);
+      await sendEmail({ senderId: req.user.id, toEmail: leave.Employee?.User?.email, subject: tpl.subject, bodyHtml: tpl.bodyHtml });
+    } catch (err) {
+      console.error('Leave decision email failed:', err.message);
+    }
+
     res.json({ message: 'Leave approved successfully', leave });
   } catch (err) {
     console.error('Approve leave error:', err);
@@ -97,7 +118,7 @@ const approveLeave = async (req, res, next) => {
 const rejectLeave = async (req, res, next) => {
   try {
     const leave = await LeaveRequest.findByPk(req.params.id, {
-      include: [{ model: Employee, include: [{ model: User, attributes: ['id', 'name'] }] }],
+      include: [{ model: Employee, include: [{ model: User, attributes: ['id', 'name', 'email'] }] }],
     });
     if (!leave) return res.status(404).json({ message: 'Leave request not found' });
     if (leave.status !== 'PENDING') return res.status(400).json({ message: 'Can only reject pending requests' });
@@ -109,6 +130,14 @@ const rejectLeave = async (req, res, next) => {
         userId: leave.Employee.User.id,
         message: `Your leave request (${leave.startDate} to ${leave.endDate}) has been rejected.`,
       });
+    }
+
+    // Email the employee the decision (best-effort).
+    try {
+      const tpl = templates.leaveDecision('REJECTED', leave.startDate, leave.endDate, req.body?.note || null);
+      await sendEmail({ senderId: req.user.id, toEmail: leave.Employee?.User?.email, subject: tpl.subject, bodyHtml: tpl.bodyHtml });
+    } catch (err) {
+      console.error('Leave decision email failed:', err.message);
     }
 
     res.json({ message: 'Leave rejected successfully', leave });

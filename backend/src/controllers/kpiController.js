@@ -1,4 +1,5 @@
 const { KPI, Task, Employee, User, Team, Notification } = require('../models');
+const { sendEmail, templates } = require('../services/emailService');
 
 // GET /api/kpis/my-team — every KPI this PMO has assigned, with member + tasks
 const getMyTeamKpis = async (req, res, next) => {
@@ -55,7 +56,7 @@ const createKpi = async (req, res, next) => {
     }
 
     const employee = await Employee.findByPk(employeeId, {
-      include: [{ model: User, attributes: ['id', 'name'] }],
+      include: [{ model: User, attributes: ['id', 'name', 'email'] }],
     });
     if (!employee) return res.status(404).json({ message: 'Employee not found' });
 
@@ -75,6 +76,14 @@ const createKpi = async (req, res, next) => {
         userId: employee.User.id,
         message: `New KPI assigned: ${title}.${endDate ? ` ETA: ${endDate}` : ''}`,
       });
+    }
+
+    // Email the assignee (best-effort).
+    try {
+      const tpl = templates.kpiAssigned(employee.User?.name, title, targetScore ?? 100, endDate || '—');
+      await sendEmail({ senderId: req.user.id, toEmail: employee.User?.email, subject: tpl.subject, bodyHtml: tpl.bodyHtml });
+    } catch (err) {
+      console.error('KPI assigned email failed:', err.message);
     }
 
     res.status(201).json(kpi);

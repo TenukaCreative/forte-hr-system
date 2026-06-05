@@ -12,6 +12,7 @@ const kpiRoutes = require('./kpis');
 const taskRoutes = require('./tasks');
 const ethicsRoutes = require('./ethics');
 const settingsRoutes = require('./settings');
+const calendarRoutes = require('./calendar');
 
 router.use('/auth', authRoutes);
 router.use('/employees', employeeRoutes);
@@ -24,5 +25,6 @@ router.use('/kpis', kpiRoutes);
 router.use('/tasks', taskRoutes);
 router.use('/ethics', ethicsRoutes);
 router.use('/settings', settingsRoutes);
+router.use('/calendar', calendarRoutes);
 
 module.exports = router;
