@@ -1,5 +1,9 @@
 const { LeaveRequest, Employee, User, Notification } = require('../models');
-const { sendEmail, templates } = require('../services/emailService');
+const {
+  sendLeaveSubmittedEmail,
+  sendLeaveApprovedEmail,
+  sendLeaveRejectedEmail,
+} = require('../services/emailService');
 
 const requestLeave = async (req, res, next) => {
   try {
@@ -32,16 +36,11 @@ const requestLeave = async (req, res, next) => {
       )
     );
 
-    // Email the PMO reviewers (best-effort — never blocks the request).
+    // Email notification (best-effort — never blocks the request).
     try {
-      const tpl = templates.leaveSubmitted(req.user.name, startDate, endDate, leaveType);
-      await Promise.all(
-        pmoUsers.map((u) =>
-          sendEmail({ senderId: req.user.id, toEmail: u.email, subject: tpl.subject, bodyHtml: tpl.bodyHtml })
-        )
-      );
+      await sendLeaveSubmittedEmail(req.user, { leaveType, startDate, endDate });
     } catch (err) {
-      console.error('Leave submitted email failed:', err.message);
+      console.error('[email] notification failed:', err.message);
     }
 
     res.status(201).json(leave);
@@ -102,10 +101,13 @@ const approveLeave = async (req, res, next) => {
 
     // Email the employee the decision (best-effort).
     try {
-      const tpl = templates.leaveDecision('APPROVED', leave.startDate, leave.endDate, req.body?.note || null);
-      await sendEmail({ senderId: req.user.id, toEmail: leave.Employee?.User?.email, subject: tpl.subject, bodyHtml: tpl.bodyHtml });
+      await sendLeaveApprovedEmail(leave.Employee?.User, {
+        startDate: leave.startDate,
+        endDate: leave.endDate,
+        reviewNote: req.body?.note || null,
+      });
     } catch (err) {
-      console.error('Leave decision email failed:', err.message);
+      console.error('[email] notification failed:', err.message);
     }
 
     res.json({ message: 'Leave approved successfully', leave });
@@ -134,10 +136,13 @@ const rejectLeave = async (req, res, next) => {
 
     // Email the employee the decision (best-effort).
     try {
-      const tpl = templates.leaveDecision('REJECTED', leave.startDate, leave.endDate, req.body?.note || null);
-      await sendEmail({ senderId: req.user.id, toEmail: leave.Employee?.User?.email, subject: tpl.subject, bodyHtml: tpl.bodyHtml });
+      await sendLeaveRejectedEmail(leave.Employee?.User, {
+        startDate: leave.startDate,
+        endDate: leave.endDate,
+        reviewNote: req.body?.note || null,
+      });
     } catch (err) {
-      console.error('Leave decision email failed:', err.message);
+      console.error('[email] notification failed:', err.message);
     }
 
     res.json({ message: 'Leave rejected successfully', leave });

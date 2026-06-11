@@ -55,7 +55,16 @@ const getAllUsers = async (req, res, next) => {
 const getEmployee = async (req, res, next) => {
   try {
     const { userId } = req.params;
-    const user = await User.findByPk(userId);
+    const user = await User.findByPk(userId, {
+      include: [
+        {
+          model: User,
+          as: 'manager',
+          attributes: ['id', 'name', 'email', 'jobTitle', 'department', 'profilePhotoUrl'],
+          required: false,
+        },
+      ],
+    });
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     const employee = await Employee.findOne({ where: { userId } });

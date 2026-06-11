@@ -1,5 +1,5 @@
 const { EthicsReview, Employee, User, KPI, Notification } = require('../models');
-const { sendEmail, templates } = require('../services/emailService');
+const { sendEthicsReviewEmail } = require('../services/emailService');
 
 // Weighted ethics score out of 100 (Performance 80 + Behavioral 20).
 const calcEthicsScore = (data) => parseFloat((
@@ -65,10 +65,9 @@ const createOrUpdateEthicsReview = async (req, res, next) => {
 
     // Email the reviewed employee (best-effort).
     try {
-      const tpl = templates.ethicsReview(employee.User?.name, period, ethicsScore);
-      await sendEmail({ senderId: req.user.id, toEmail: employee.User?.email, subject: tpl.subject, bodyHtml: tpl.bodyHtml });
+      await sendEthicsReviewEmail(employee.User, { period, ethicsScore });
     } catch (err) {
-      console.error('Ethics review email failed:', err.message);
+      console.error('[email] notification failed:', err.message);
     }
 
     res.status(201).json(review);

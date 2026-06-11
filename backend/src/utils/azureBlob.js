@@ -14,9 +14,12 @@ const getClient = () => {
   return new BlobServiceClient(`https://${accountName}.blob.core.windows.net`, credential);
 };
 
-const uploadToBlob = async (fileName, fileBuffer, mimeType) => {
-  const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME;
-  const blobName = `employeeDocs/${crypto.randomUUID()}-${fileName}`;
+const uploadToBlob = async (fileName, fileBuffer, mimeType, containerType = 'docs') => {
+  const containerName = containerType === 'photos'
+    ? process.env.AZURE_STORAGE_PHOTOS_CONTAINER
+    : process.env.AZURE_STORAGE_CONTAINER_NAME;
+  const folder = containerType === 'photos' ? 'profilePhotos' : 'employeeDocs';
+  const blobName = `${folder}/${crypto.randomUUID()}-${fileName}`;
   const client = getClient();
 
   // Dev fallback: Azure credentials not yet configured

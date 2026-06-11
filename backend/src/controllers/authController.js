@@ -89,11 +89,57 @@ const microsoftCallback = async (req, res, next) => {
 
     // Store the MS Graph access token so the app can send mail and read the
     // user's Outlook calendar on their behalf (token lasts ~60 min).
+    // Also sync the AD hierarchy fields onto the User record and mark it
+    // provisioned, now that the profile has been confirmed from Azure AD.
     const tokenExpiry = new Date(Date.now() + 55 * 60 * 1000); // refresh 5 min early
-    await user.update({
+    const userUpdates = {
       msAccessToken: accessToken,
       msTokenExpiry: tokenExpiry,
-    });
+      isProvisioned: true,
+    };
+    if (department) userUpdates.department = department;
+    if (designation) userUpdates.jobTitle = designation;
+    await user.update(userUpdates);
+
+    // Fetch the user's reporting manager from AD and link the hierarchy.
+    // Not every user has a manager set in AD — a 404 (or any error) is
+    // expected/tolerated here and must never break the login flow.
+    try {
+      const { data: managerData } = await axios.get(
+        `${process.env.GRAPH_API_ENDPOINT}/me/manager`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          params: { $select: 'displayName,mail,jobTitle,department' },
+        }
+      );
+
+      const managerEmail = managerData.mail;
+      if (managerEmail) {
+        let managerUser = await User.findOne({ where: { email: managerEmail } });
+        if (!managerUser) {
+          // Stub record for the manager — role stays null, HR assigns later.
+          managerUser = await User.create({
+            name: managerData.displayName,
+            email: managerEmail,
+            jobTitle: managerData.jobTitle || null,
+            department: managerData.department || null,
+            isProvisioned: false,
+          });
+          console.log(`Manager stub created from AD: ${managerEmail}`);
+        }
+
+        await User.update(
+          { managerId: managerUser.id },
+          { where: { email } }
+        );
+      }
+    } catch (err) {
+      // 404 = no manager assigned in AD; swallow it and continue (managerId
+      // stays null). Log anything unexpected, but never fail the login.
+      if (err.response?.status !== 404) {
+        console.error('MS Graph manager fetch failed:', err.response?.data || err.message);
+      }
+    }
 
     const { token, user: userPayload } = issueJwt(user);
     return res.json({ token, user: userPayload });

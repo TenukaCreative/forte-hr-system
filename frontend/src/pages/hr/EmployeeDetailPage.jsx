@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { Upload, Trash2, FileText, ArrowLeft } from 'lucide-react';
 import Shell from '../../components/layout/Shell';
-import { formatDate } from '../../components/theme';
+import { C, formatDate } from '../../components/theme';
 import api from '../../api/axios';
 
 const DEPARTMENTS = ['IT', 'HR', 'PMO', 'Finance', 'Operations'];
@@ -42,6 +42,11 @@ const formatSize = (bytes) => {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const getInitials = (name) => {
+  if (!name) return '?';
+  return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
 };
 
 export default function EmployeeDetailPage() {
@@ -149,9 +154,8 @@ export default function EmployeeDetailPage() {
 
   if (loading) return <Shell><div className="spinner-full"><div className="spinner" /></div></Shell>;
 
-  const initials = userData?.name
-    ? userData.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
-    : '??';
+  const initials = getInitials(userData?.name);
+  const manager = userData?.manager;
 
   return (
     <Shell>
@@ -254,33 +258,94 @@ export default function EmployeeDetailPage() {
         .forte-textarea::placeholder { color: rgba(21,22,26,0.3); }
       `}</style>
 
-      {/* Section 1 — Header card */}
+      {/* Back to employees */}
+      <div style={{ marginBottom: 16 }}>
+        <button className="btn-ghost" onClick={() => navigate('/employees')}>
+          <ArrowLeft size={15} /> Back to employees
+        </button>
+      </div>
+
+      {/* Section 1 — Hero header */}
       <div
-        className="card"
-        style={{ marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}
+        style={{
+          background: '#fff', border: `1px solid ${C.border}`, borderRadius: 16,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: 24, marginBottom: 24,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 24,
+        }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 0 }}>
+        {/* Left — identity */}
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', minWidth: 0 }}>
           <div style={{
-            width: 56, height: 56, borderRadius: '50%', background: '#C8203D', color: '#fff',
+            width: 64, height: 64, borderRadius: '50%', background: C.accent, color: '#fff',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 22, fontWeight: 700, flexShrink: 0, letterSpacing: '0.02em',
+            fontSize: 20, fontWeight: 700, flexShrink: 0, letterSpacing: '0.02em',
           }}>
             {initials}
           </div>
           <div style={{ minWidth: 0 }}>
-            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>{userData?.name}</h1>
-            <p style={{ margin: '2px 0 0', fontSize: 14, color: 'rgba(21,22,26,0.5)' }}>{userData?.email}</p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
-              {userData?.role && <span style={rolePill}>{roleLabel(userData.role)}</span>}
-              {employee?.employeeCode && <span style={infoPill}>{employee.employeeCode}</span>}
-              {employee?.department && <span style={infoPill}>{employee.department}</span>}
-              {employee?.joinDate && <span style={infoPill}>Joined {formatDate(employee.joinDate)}</span>}
+            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: C.dark }}>{userData?.name}</h1>
+            <p style={{ margin: '2px 0 0', fontSize: 14, color: '#6b7280' }}>{userData?.email}</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+              {userData?.role && (
+                <span style={{ background: C.accent, color: '#fff', fontSize: 12, padding: '4px 12px', borderRadius: 9999 }}>
+                  {roleLabel(userData.role)}
+                </span>
+              )}
+              {employee?.employeeCode && (
+                <span style={{ border: `1px solid ${C.border}`, color: '#4b5563', fontSize: 12, padding: '4px 12px', borderRadius: 9999 }}>
+                  {employee.employeeCode}
+                </span>
+              )}
+              {(userData?.department || employee?.department) && (
+                <span style={{ border: `1px solid ${C.border}`, color: '#4b5563', fontSize: 12, padding: '4px 12px', borderRadius: 9999 }}>
+                  {userData?.department || employee?.department}
+                </span>
+              )}
             </div>
+            {employee?.joinDate && (
+              <p style={{ margin: '8px 0 0', fontSize: 12, color: '#9ca3af' }}>Joined {formatDate(employee.joinDate)}</p>
+            )}
           </div>
         </div>
-        <button className="btn-ghost" style={{ alignSelf: 'flex-start', flexShrink: 0 }} onClick={() => navigate('/employees')}>
-          <ArrowLeft size={15} /> Back to employees
-        </button>
+
+        {/* Right — Reporting Manager */}
+        {manager && (
+          <div style={{ flexShrink: 0 }}>
+            <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.12em', color: '#9ca3af', textTransform: 'uppercase', margin: '0 0 8px' }}>
+              Reporting Manager
+            </p>
+            <div style={{
+              background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12, padding: 16,
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)', minWidth: 260,
+              display: 'flex', gap: 12, alignItems: 'center',
+            }}>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <div style={{
+                  width: 48, height: 48, borderRadius: '50%', background: '#3b82f6', color: '#fff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 600,
+                }}>
+                  {getInitials(manager.name)}
+                </div>
+                <span style={{
+                  position: 'absolute', bottom: 0, right: 0, width: 8, height: 8,
+                  borderRadius: '50%', background: '#4ade80', border: '1.5px solid #fff',
+                }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: C.dark }}>{manager.name}</span>
+                {manager.jobTitle && (
+                  <span style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{manager.jobTitle}</span>
+                )}
+                <span
+                  onClick={() => navigate('/employees/' + manager.id)}
+                  style={{ fontSize: 12, color: C.accent, fontWeight: 500, marginTop: 8, cursor: 'pointer' }}
+                >
+                  View profile →
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Section 2 — Two columns */}

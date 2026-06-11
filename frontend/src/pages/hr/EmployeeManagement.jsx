@@ -98,13 +98,24 @@ export default function EmployeeManagement() {
     api.get('/employees').then((r) => setUsers(r.data)).finally(() => setLoading(false));
   }, []);
 
+  const isProfileComplete = (u) => {
+    if (!u.employee) return false;
+    if (!u.role) return false;
+    if (!u.employee.joinDate) return false;
+    if (
+      !u.employee.employeeCode ||
+      u.employee.employeeCode.startsWith('PENDING-')
+    ) return false;
+    return true;
+  };
+
   const filtered = users.filter((u) =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||
     u.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  const complete   = users.filter((u) => u.employee).length;
-  const incomplete = users.filter((u) => !u.employee).length;
+  const complete   = users.filter((u) => isProfileComplete(u)).length;
+  const incomplete = users.filter((u) => !isProfileComplete(u)).length;
 
   const styleBlock = `
     @keyframes em-shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
@@ -277,7 +288,7 @@ export default function EmployeeManagement() {
 
                       {/* Profile status */}
                       <td style={cellBase}>
-                        {u.employee ? (
+                        {isProfileComplete(u) ? (
                           <span style={{
                             display: 'inline-flex', alignItems: 'center', gap: 4,
                             background: '#DCFCE7', color: '#16A34A',

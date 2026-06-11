@@ -1,5 +1,5 @@
 const { KPI, Task, Employee, User, Team, Notification } = require('../models');
-const { sendEmail, templates } = require('../services/emailService');
+const { sendKpiAssignedEmail } = require('../services/emailService');
 
 // GET /api/kpis/my-team — every KPI this PMO has assigned, with member + tasks
 const getMyTeamKpis = async (req, res, next) => {
@@ -80,10 +80,13 @@ const createKpi = async (req, res, next) => {
 
     // Email the assignee (best-effort).
     try {
-      const tpl = templates.kpiAssigned(employee.User?.name, title, targetScore ?? 100, endDate || '—');
-      await sendEmail({ senderId: req.user.id, toEmail: employee.User?.email, subject: tpl.subject, bodyHtml: tpl.bodyHtml });
+      await sendKpiAssignedEmail(employee.User, {
+        title,
+        targetScore: targetScore ?? 100,
+        endDate: endDate || '—',
+      });
     } catch (err) {
-      console.error('KPI assigned email failed:', err.message);
+      console.error('[email] notification failed:', err.message);
     }
 
     res.status(201).json(kpi);

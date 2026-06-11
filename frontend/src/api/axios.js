@@ -16,9 +16,9 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
-      localStorage.removeItem('forte_token');
-      localStorage.removeItem('forte_user');
-      window.location.href = '/login';
+      // Token expired / unauthorized — auto-logout and return to login.
+      localStorage.clear();
+      window.location.href = '/';
     }
     return Promise.reject(err);
   }

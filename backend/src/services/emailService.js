@@ -3,34 +3,30 @@ const { User } = require('../models');
 
 const GRAPH = process.env.GRAPH_API_ENDPOINT || 'https://graph.microsoft.com/v1.0';
 
-// Get a valid token for the sender.
-const getSenderToken = async (senderId) => {
-  const user = await User.findByPk(senderId, {
-    attributes: ['msAccessToken', 'msTokenExpiry', 'email'],
+// For testing, every email is sent FROM this mailbox and TO this address,
+// regardless of who triggered the action or who the real recipient is.
+const TEST_SENDER_EMAIL = 'hrstest1@forteinsurance.com'; // HARDCODED FOR TESTING
+const TEST_RECIPIENT_EMAIL = 'Tenuka@CreativeSoftware.com'; // HARDCODED FOR TESTING
+
+// Core send routine. Looks up the hardcoded test sender, uses their stored
+// MS Graph access token, and sends to the hardcoded test recipient.
+// Extra fields (e.g. senderId/toEmail from legacy callers) are ignored on
+// purpose — sender and recipient are always the hardcoded test values.
+const sendEmail = async ({ subject, bodyHtml }) => {
+  // 1. Look up the sender user from the DB by email.
+  const sender = await User.findOne({
+    where: { email: TEST_SENDER_EMAIL }, // HARDCODED FOR TESTING
+    attributes: ['id', 'email', 'msAccessToken'],
   });
 
-  if (!user?.msAccessToken) {
-    throw new Error('No access token for sender');
+  // 2. Use that user's stored msAccessToken. If missing, warn and return.
+  if (!sender?.msAccessToken) {
+    console.warn(`[emailService] No msAccessToken for test sender ${TEST_SENDER_EMAIL}; skipping email.`);
+    return;
   }
 
-  return user.msAccessToken;
-};
-
-// Send email via MS Graph on behalf of the sender.
-const sendEmail = async ({
-  senderId, // userId of sender
-  toEmail,  // recipient email
-  subject,
-  bodyHtml, // HTML email body
-}) => {
+  // 5. Wrap the Graph call so email failure never breaks the main action.
   try {
-    if (!toEmail) {
-      console.error('Email send skipped: no recipient address');
-      return false;
-    }
-
-    const token = await getSenderToken(senderId);
-
     await axios.post(
       `${GRAPH}/me/sendMail`,
       {
@@ -40,126 +36,129 @@ const sendEmail = async ({
             contentType: 'HTML',
             content: bodyHtml,
           },
-          toRecipients: [{
-            emailAddress: { address: toEmail },
-          }],
+          toRecipients: [
+            // 3. Recipient is always the hardcoded test address.
+            { emailAddress: { address: TEST_RECIPIENT_EMAIL } }, // HARDCODED FOR TESTING
+          ],
         },
         saveToSentItems: false,
       },
       {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${sender.msAccessToken}`,
           'Content-Type': 'application/json',
         },
       }
     );
-
-    console.log(`Email sent to ${toEmail}`);
-    return true;
   } catch (err) {
-    // Log but don't throw — email failure must never block the main action.
-    console.error('Email send failed:', err.response?.data || err.message);
-    return false;
+    console.error('[emailService] Failed to send email:', err.message);
   }
 };
 
-// Email templates
+// Shared HTML wrapper for a simple, branded email body.
+const wrap = (heading, inner, color = '#C8203D') => `
+  <div style="font-family:Inter,sans-serif;padding:24px">
+    <h2 style="color:${color}">${heading}</h2>
+    ${inner}
+    <p>View details in Forte TrackIT.</p>
+  </div>
+`;
+
+// ---- Trigger functions ----
+// Each builds a relevant subject + simple HTML body and calls the core
+// sendEmail. `employee` is the (real) subject of the event; recipient is
+// always overridden to the hardcoded test address inside sendEmail.
+
+const sendLeaveSubmittedEmail = (employee, leaveData = {}) =>
+  sendEmail({
+    subject: `Leave Request Submitted — ${employee?.name || 'Employee'}`,
+    bodyHtml: wrap(
+      'Leave Request Submitted',
+      `<p>${employee?.name || 'An employee'} has submitted a leave request
+        (${leaveData.leaveType || 'Leave'}) from ${leaveData.startDate || '—'}
+        to ${leaveData.endDate || '—'}.</p>`
+    ),
+  });
+
+const sendLeaveApprovedEmail = (employee, leaveData = {}) =>
+  sendEmail({
+    subject: 'Leave Request Approved',
+    bodyHtml: wrap(
+      'Leave Approved ✓',
+      `<p>${employee?.name || 'Your'} leave request from ${leaveData.startDate || '—'}
+        to ${leaveData.endDate || '—'} has been approved.
+        ${leaveData.reviewNote ? `Note: ${leaveData.reviewNote}` : ''}</p>`,
+      '#065F46'
+    ),
+  });
+
+const sendLeaveRejectedEmail = (employee, leaveData = {}) =>
+  sendEmail({
+    subject: 'Leave Request Rejected',
+    bodyHtml: wrap(
+      'Leave Rejected ✗',
+      `<p>${employee?.name || 'Your'} leave request from ${leaveData.startDate || '—'}
+        to ${leaveData.endDate || '—'} has been rejected.
+        ${leaveData.reviewNote ? `Note: ${leaveData.reviewNote}` : ''}</p>`
+    ),
+  });
+
+const sendKpiAssignedEmail = (employee, kpiData = {}) =>
+  sendEmail({
+    subject: `New KPI Assigned — ${kpiData.title || 'KPI'}`,
+    bodyHtml: wrap(
+      'New KPI Assigned',
+      `<p>A new KPI has been assigned to ${employee?.name || 'you'}:
+        <strong>${kpiData.title || 'KPI'}</strong>.
+        Target: ${kpiData.targetScore ?? '—'}.
+        ${kpiData.endDate ? `Due: ${kpiData.endDate}.` : ''}</p>`
+    ),
+  });
+
+const sendPerformanceReviewEmail = (employee, reviewData = {}) =>
+  sendEmail({
+    subject: `Performance Review — ${reviewData.period || ''}`.trim(),
+    bodyHtml: wrap(
+      'Performance Review Submitted',
+      `<p>A performance review for ${employee?.name || 'you'}
+        ${reviewData.period ? `(${reviewData.period})` : ''} has been submitted.
+        Score: ${reviewData.score ?? reviewData.ethicsScore ?? '—'}/100.</p>`
+    ),
+  });
+
+const sendEthicsReviewEmail = (employee, reviewData = {}) =>
+  sendEmail({
+    subject: `Ethics Review Submitted — ${reviewData.period || ''}`.trim(),
+    bodyHtml: wrap(
+      'Ethics Review Submitted',
+      `<p>An ethics review for ${employee?.name || 'you'}
+        ${reviewData.period ? `(${reviewData.period})` : ''} has been submitted.
+        Score: ${reviewData.ethicsScore ?? '—'}/100.</p>`
+    ),
+  });
+
+// Legacy templates — still used by taskController for task-assignment emails.
 const templates = {
-  leaveSubmitted: (employeeName, startDate, endDate, leaveType) => ({
-    subject: `Leave Request — ${employeeName}`,
-    bodyHtml: `
-      <div style="font-family:Inter,sans-serif;padding:24px">
-        <h2 style="color:#C8203D">Leave Request Submitted</h2>
-        <p>${employeeName} has submitted a leave request:</p>
-        <table style="margin:16px 0">
-          <tr><td style="padding:4px 16px 4px 0;font-weight:600">Type</td><td>${leaveType}</td></tr>
-          <tr><td style="padding:4px 16px 4px 0;font-weight:600">From</td><td>${startDate}</td></tr>
-          <tr><td style="padding:4px 16px 4px 0;font-weight:600">To</td><td>${endDate}</td></tr>
-        </table>
-        <p>Please review in Forte TrackIT.</p>
-      </div>
-    `,
-  }),
-
-  leaveDecision: (status, startDate, endDate, reviewNote) => ({
-    subject: `Leave ${status === 'APPROVED' ? 'Approved' : 'Rejected'}`,
-    bodyHtml: `
-      <div style="font-family:Inter,sans-serif;padding:24px">
-        <h2 style="color:${status === 'APPROVED' ? '#065F46' : '#C8203D'}">
-          Leave ${status === 'APPROVED' ? 'Approved ✓' : 'Rejected ✗'}
-        </h2>
-        <p>Your leave request has been ${status.toLowerCase()}:</p>
-        <table style="margin:16px 0">
-          <tr><td style="padding:4px 16px 4px 0;font-weight:600">From</td><td>${startDate}</td></tr>
-          <tr><td style="padding:4px 16px 4px 0;font-weight:600">To</td><td>${endDate}</td></tr>
-          ${reviewNote ? `<tr><td style="padding:4px 16px 4px 0;font-weight:600">Note</td><td>${reviewNote}</td></tr>` : ''}
-        </table>
-        <p>View details in Forte TrackIT.</p>
-      </div>
-    `,
-  }),
-
-  kpiAssigned: (employeeName, kpiTitle, targetScore, etaDate) => ({
-    subject: `New KPI Assigned — ${kpiTitle}`,
-    bodyHtml: `
-      <div style="font-family:Inter,sans-serif;padding:24px">
-        <h2 style="color:#C8203D">New KPI Assigned</h2>
-        <p>A new KPI has been assigned to you:</p>
-        <table style="margin:16px 0">
-          <tr><td style="padding:4px 16px 4px 0;font-weight:600">KPI</td><td>${kpiTitle}</td></tr>
-          <tr><td style="padding:4px 16px 4px 0;font-weight:600">Target Score</td><td>${targetScore}</td></tr>
-          <tr><td style="padding:4px 16px 4px 0;font-weight:600">Due Date</td><td>${etaDate}</td></tr>
-        </table>
-        <p>View in Forte TrackIT.</p>
-      </div>
-    `,
-  }),
-
   taskAssigned: (taskTitle, kpiTitle, etaDate) => ({
     subject: `New Task Assigned — ${taskTitle}`,
-    bodyHtml: `
-      <div style="font-family:Inter,sans-serif;padding:24px">
-        <h2 style="color:#C8203D">New Task Assigned</h2>
-        <p>A new task has been assigned to you:</p>
-        <table style="margin:16px 0">
-          <tr><td style="padding:4px 16px 4px 0;font-weight:600">Task</td><td>${taskTitle}</td></tr>
-          <tr><td style="padding:4px 16px 4px 0;font-weight:600">KPI</td><td>${kpiTitle}</td></tr>
-          <tr><td style="padding:4px 16px 4px 0;font-weight:600">Due Date</td><td>${etaDate}</td></tr>
-        </table>
-        <p>View in Forte TrackIT.</p>
-      </div>
-    `,
-  }),
-
-  ethicsReview: (employeeName, period, ethicsScore) => ({
-    subject: `Ethics Review Submitted — ${period}`,
-    bodyHtml: `
-      <div style="font-family:Inter,sans-serif;padding:24px">
-        <h2 style="color:#C8203D">Ethics Review Submitted</h2>
-        <p>Your ethics review for ${period} has been submitted:</p>
-        <table style="margin:16px 0">
-          <tr><td style="padding:4px 16px 4px 0;font-weight:600">Period</td><td>${period}</td></tr>
-          <tr><td style="padding:4px 16px 4px 0;font-weight:600">Score</td><td>${ethicsScore}/100</td></tr>
-        </table>
-        <p>View full review in Forte TrackIT.</p>
-      </div>
-    `,
-  }),
-
-  performanceReview: (employeeName, period, score) => ({
-    subject: `Performance Review — ${period}`,
-    bodyHtml: `
-      <div style="font-family:Inter,sans-serif;padding:24px">
-        <h2 style="color:#C8203D">Performance Review Submitted</h2>
-        <p>Your performance review for ${period} has been completed:</p>
-        <table style="margin:16px 0">
-          <tr><td style="padding:4px 16px 4px 0;font-weight:600">Period</td><td>${period}</td></tr>
-          <tr><td style="padding:4px 16px 4px 0;font-weight:600">Score</td><td>${score}/100</td></tr>
-        </table>
-        <p>View details in Forte TrackIT.</p>
-      </div>
-    `,
+    bodyHtml: wrap(
+      'New Task Assigned',
+      `<table style="margin:16px 0">
+        <tr><td style="padding:4px 16px 4px 0;font-weight:600">Task</td><td>${taskTitle}</td></tr>
+        <tr><td style="padding:4px 16px 4px 0;font-weight:600">KPI</td><td>${kpiTitle}</td></tr>
+        <tr><td style="padding:4px 16px 4px 0;font-weight:600">Due Date</td><td>${etaDate}</td></tr>
+      </table>`
+    ),
   }),
 };
 
-module.exports = { sendEmail, templates };
+module.exports = {
+  sendEmail,
+  templates,
+  sendLeaveSubmittedEmail,
+  sendLeaveApprovedEmail,
+  sendLeaveRejectedEmail,
+  sendKpiAssignedEmail,
+  sendPerformanceReviewEmail,
+  sendEthicsReviewEmail,
+};

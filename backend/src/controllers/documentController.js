@@ -25,6 +25,12 @@ const uploadDocument = async (req, res, next) => {
 
     res.status(201).json(doc);
   } catch (err) {
+    console.error('Upload error full details:', {
+      message: err.message,
+      code: err.code,
+      statusCode: err.statusCode,
+      details: err.details || err.response?.body
+    });
     next(err);
   }
 };

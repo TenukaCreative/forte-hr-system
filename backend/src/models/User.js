@@ -42,9 +42,42 @@ module.exports = (sequelize) => {
       type: DataTypes.DATE,
       allowNull: true,
     },
+    jobTitle: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    department: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    // Self-reference to the user's manager. Typed UUID (not INTEGER) to match
+    // the UUID primary key it references.
+    managerId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: { model: 'Users', key: 'id' },
+      onUpdate: 'CASCADE',
+      onDelete: 'SET NULL',
+    },
+    isProvisioned: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+    },
+    profilePhotoUrl: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    bio: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
   }, {
     timestamps: true,
   });
+
+  User.belongsTo(User, { as: 'manager', foreignKey: 'managerId' });
+  User.hasMany(User, { as: 'directReports', foreignKey: 'managerId' });
 
   return User;
 };
