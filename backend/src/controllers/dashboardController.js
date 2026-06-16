@@ -1,12 +1,13 @@
 const { User, Employee, LeaveRequest, Document, Notification } = require('../models');
 const calcPerformance = require('../utils/calcPerformance');
 const { calcPMOScore } = require('../utils/calcPMOScore');
+const resolveRole = require('../utils/resolveRole');
 
 const getDashboard = async (req, res, next) => {
   try {
     const { id } = req.user;
 
-    const user = await User.findByPk(id, { attributes: ['name', 'email', 'role'] });
+    const user = await User.findByPk(id, { attributes: ['name', 'email', 'jobTitle'] });
     const employee = await Employee.findOne({ where: { userId: id } });
 
     let leave = null;
@@ -14,11 +15,11 @@ const getDashboard = async (req, res, next) => {
     let documents = null;
 
     if (employee) {
-      const leaveRecords = await LeaveRequest.findAll({ where: { employeeId: employee.id } });
+      const leaveRecords = await LeaveRequest.findAll({ where: { employeeId: req.user.id } });
       leave = {
         taken: leaveRecords
           .filter((l) => l.status === 'APPROVED')
-          .reduce((s, l) => s + (l.totalDays || 0), 0),
+          .reduce((s, l) => s + (parseFloat(l.daysCount) || 0), 0),
         pending: leaveRecords.filter((l) => l.status === 'PENDING').length,
       };
 
@@ -45,10 +46,11 @@ const getDashboard = async (req, res, next) => {
       documents = { total: docCount, latestUpload: latestDoc?.uploadedAt || null };
     }
 
-    // Management score for HEAD_OF_PMO — based on team task completion, not their
-    // own KPIs. Computed even without an employee record so a PMO who only manages
-    // (no personal KPIs) still sees their management score.
-    if (req.user.role === 'HEAD_OF_PMO') {
+    // Management score for senior PMO roles — based on team task completion, not
+    // their own KPIs. Computed even without an employee record so a PMO who only
+    // manages (no personal KPIs) still sees their management score.
+    const resolvedRole = resolveRole(req.user.designation);
+    if (resolvedRole === 'SENIOR' || resolvedRole === 'SUPER_ADMIN') {
       const pmoScore = await calcPMOScore(req.user.id);
       performance = performance || {
         overallScore: 0, totalKPIs: 0, completedTasks: 0, totalTasks: 0, kpis: [],
@@ -62,7 +64,7 @@ const getDashboard = async (req, res, next) => {
     const unread = await Notification.count({ where: { userId: id, isRead: false } });
 
     res.json({
-      user: { name: user.name, email: user.email, role: user.role },
+      user: { name: user.name, email: user.email, designation: user.jobTitle },
       employee: employee ? {
         employeeCode: employee.employeeCode,
         department: employee.department,

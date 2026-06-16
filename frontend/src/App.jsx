@@ -29,22 +29,22 @@ import CompanyCalendar from './pages/calendar/CompanyCalendar';
 import SettingsPage from './pages/settings/SettingsPage';
 
 function RoleRoute({ roles, children }) {
-  const { user } = useAuth();
-  if (!roles.includes(user?.role)) return <Navigate to="/dashboard" replace />;
+  const { resolvedRole } = useAuth();
+  if (!roles.includes(resolvedRole)) return <Navigate to="/dashboard" replace />;
   return children;
 }
 
 function PerformanceRouter() {
-  const { user } = useAuth();
-  if (user?.role === 'HEAD_OF_PMO') {
+  const { resolvedRole } = useAuth();
+  if (resolvedRole === 'SENIOR' || resolvedRole === 'SUPER_ADMIN') {
     return <PMOPerformancePage />;
   }
   return <PerformancePage />;
 }
 
 function DashboardRouter() {
-  const { user } = useAuth();
-  if (user?.role === 'HEAD_OF_PMO') {
+  const { resolvedRole } = useAuth();
+  if (resolvedRole === 'SENIOR' || resolvedRole === 'SUPER_ADMIN') {
     return <PMODashboardPage />;
   }
   return <DashboardPage />;
@@ -85,7 +85,7 @@ export default function App() {
         path="/employees"
         element={
           <ProtectedRoute>
-            <RoleRoute roles={['HR_MANAGER', 'IT', 'SUPER_ADMIN']}>
+            <RoleRoute roles={['HR_MANAGER', 'SENIOR', 'SUPER_ADMIN']}>
               <EmployeeManagement />
             </RoleRoute>
           </ProtectedRoute>
@@ -95,7 +95,7 @@ export default function App() {
         path="/employees/:userId"
         element={
           <ProtectedRoute>
-            <RoleRoute roles={['HR_MANAGER', 'IT', 'SUPER_ADMIN']}>
+            <RoleRoute roles={['HR_MANAGER', 'SENIOR', 'SUPER_ADMIN']}>
               <EmployeeDetailPage />
             </RoleRoute>
           </ProtectedRoute>
@@ -105,7 +105,7 @@ export default function App() {
         path="/leave-overview"
         element={
           <ProtectedRoute>
-            <RoleRoute roles={['HR_MANAGER', 'HEAD_OF_PMO', 'IT', 'SUPER_ADMIN']}>
+            <RoleRoute roles={['HR_MANAGER', 'SENIOR', 'SUPER_ADMIN']}>
               <LeaveOverview />
             </RoleRoute>
           </ProtectedRoute>
@@ -117,7 +117,7 @@ export default function App() {
         path="/team"
         element={
           <ProtectedRoute>
-            <RoleRoute roles={['HEAD_OF_PMO', 'SUPER_ADMIN']}>
+            <RoleRoute roles={['SENIOR', 'SUPER_ADMIN']}>
               <TeamPage />
             </RoleRoute>
           </ProtectedRoute>
@@ -127,7 +127,7 @@ export default function App() {
         path="/leave-approvals"
         element={
           <ProtectedRoute>
-            <RoleRoute roles={['HEAD_OF_PMO', 'HR_MANAGER', 'IT', 'SUPER_ADMIN']}>
+            <RoleRoute roles={['SENIOR', 'HR_MANAGER', 'SUPER_ADMIN']}>
               <LeaveOverview />
             </RoleRoute>
           </ProtectedRoute>
@@ -137,7 +137,7 @@ export default function App() {
         path="/settings"
         element={
           <ProtectedRoute>
-            <RoleRoute roles={['HEAD_OF_PMO', 'SUPER_ADMIN']}>
+            <RoleRoute roles={['SENIOR', 'SUPER_ADMIN']}>
               <SettingsPage />
             </RoleRoute>
           </ProtectedRoute>
@@ -149,7 +149,7 @@ export default function App() {
         path="/system-users"
         element={
           <ProtectedRoute>
-            <RoleRoute roles={['IT', 'SUPER_ADMIN']}>
+            <RoleRoute roles={['SENIOR', 'SUPER_ADMIN']}>
               <PlaceholderPage title="System Users" />
             </RoleRoute>
           </ProtectedRoute>

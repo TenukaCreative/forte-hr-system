@@ -13,3 +13,16 @@ body {
   width: 100%;
   min-height: 100svh;
 }
+
+/* Bottom nav — mobile only.
+   Sidebar hiding and main-content bottom padding are already handled in
+   Shell.css at the same 768px breakpoint (.shell-sidebar / .shell-content). */
+.bottom-nav-container {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .bottom-nav-container {
+    display: flex;
+  }
+}

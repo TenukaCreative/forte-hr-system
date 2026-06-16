@@ -26,12 +26,6 @@ module.exports = (sequelize) => {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
-    // DEV ONLY — role comes from AD token in production,
-    // remove this field when AD integration is complete
-    role: {
-      type: DataTypes.ENUM('IT', 'HR_MANAGER', 'HEAD_OF_PMO', 'PM', 'BA', 'SUPER_ADMIN'),
-      allowNull: true,
-    },
     // MS Graph access token, cached so the app can send mail and read the
     // user's Outlook calendar on their behalf. Refreshed on each login.
     msAccessToken: {

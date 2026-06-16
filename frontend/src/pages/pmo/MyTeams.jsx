@@ -5,6 +5,12 @@ import api from '../../api/axios';
 import { C, card, inputStyle, fieldLabel } from '../../components/theme';
 import { Spinner, EmptyState, Button } from '../../components/ui';
 
+const seniorDesignations = (d) => {
+  if (!d) return false;
+  const lower = d.toLowerCase();
+  return lower.startsWith('head of') || lower.endsWith('lead') || d === 'Super Admin';
+};
+
 export default function MyTeams() {
   const [teams, setTeams] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
@@ -89,7 +95,7 @@ export default function MyTeams() {
   if (loading) return <Spinner />;
 
   const memberIds = new Set((selected?.members || []).map((m) => m.id));
-  const candidates = allUsers.filter((u) => u.role !== 'HEAD_OF_PMO' && !memberIds.has(u.id));
+  const candidates = allUsers.filter((u) => !seniorDesignations(u.designation) && !memberIds.has(u.id));
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 24, alignItems: 'start' }} className="mt-grid">
@@ -161,7 +167,7 @@ export default function MyTeams() {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: C.dark }}>{m.name}</p>
-                      <p style={{ margin: '2px 0 0', fontSize: 12, color: C.muted }}>{m.role?.replace(/_/g, ' ')}</p>
+                      <p style={{ margin: '2px 0 0', fontSize: 12, color: C.muted }}>{m.designation ?? ''}</p>
                     </div>
                     <button title="Remove" onClick={() => removeMember(m.id)} style={{ ...iconBtn, color: C.red }}><X size={16} /></button>
                   </div>
@@ -174,7 +180,7 @@ export default function MyTeams() {
               <select style={{ ...inputStyle, flex: 1 }} value={addUserId} onChange={(e) => setAddUserId(e.target.value)}>
                 <option value="">Select a user…</option>
                 {candidates.map((u) => (
-                  <option key={u.id} value={u.id}>{u.name} — {u.role?.replace(/_/g, ' ')}</option>
+                  <option key={u.id} value={u.id}>{u.name} — {u.designation ?? ''}</option>
                 ))}
               </select>
               <Button onClick={addMember} disabled={!addUserId} style={{ display: 'flex', alignItems: 'center', gap: 6, opacity: addUserId ? 1 : 0.5 }}>

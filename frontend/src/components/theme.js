@@ -37,6 +37,10 @@ export const STATUS_BADGE = {
   ACTIVE:    { bg: '#DCFCE7', color: '#16A34A', label: 'Active' },
   CLOSED:    { bg: '#F1F0EB', color: 'rgba(21,22,26,0.5)', label: 'Closed' },
   OVERDUE:   { bg: '#FEE2E2', color: '#DC2626', label: 'Overdue' },
+  // Leave workflow statuses
+  MANAGER_APPROVED: { bg: '#DBEAFE', color: '#2563EB', label: 'Manager Approved' },
+  APPROVED:  { bg: '#DCFCE7', color: '#16A34A', label: 'Approved' },
+  REJECTED:  { bg: '#FEE2E2', color: '#DC2626', label: 'Rejected' },
 };
 
 export const scoreColor = (score) => {

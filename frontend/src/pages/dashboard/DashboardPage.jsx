@@ -57,6 +57,9 @@ const scoreColor = (score) => {
   return '#C8203D';
 };
 
+const formatLeaveType = (t) =>
+  t ? t.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : '—';
+
 const STATUS_STYLES = {
   PENDING:  { bg: '#FEF3C7', color: '#D97706' },
   APPROVED: { bg: '#DCFCE7', color: '#16A34A' },
@@ -353,8 +356,8 @@ export default function DashboardPage() {
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ background: tStyle.bg, color: tStyle.color, borderRadius: 100, padding: '2px 9px', fontSize: 10, fontWeight: 600 }}>{l.leaveType}</span>
-                      <span style={{ fontSize: 12, color: 'rgba(21,22,26,0.5)' }}>{l.totalDays} day{l.totalDays !== 1 ? 's' : ''}</span>
+                      <span style={{ background: tStyle.bg, color: tStyle.color, borderRadius: 100, padding: '2px 9px', fontSize: 10, fontWeight: 600 }}>{formatLeaveType(l.leaveType)}</span>
+                      <span style={{ fontSize: 12, color: 'rgba(21,22,26,0.5)' }}>{l.daysCount} day{Number(l.daysCount) !== 1 ? 's' : ''}</span>
                     </div>
                   </div>
                 );

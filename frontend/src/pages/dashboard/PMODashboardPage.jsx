@@ -38,12 +38,21 @@ const timeAgo = (date) => {
 const initials = (name = '') =>
   name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
+const formatType = (t) =>
+  t ? t.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : '—';
+
 export default function PMODashboardPage() {
-  const { user } = useAuth();
+  const { user, resolvedRole } = useAuth();
   const navigate = useNavigate();
 
+  const isSuperAdmin = resolvedRole === 'SUPER_ADMIN';
+  // Pending queue: Super Admin reviews the final-approval queue; everyone else
+  // (SENIOR) reviews their own team's manager-step queue.
+  const pendingEndpoint = isSuperAdmin ? '/leaves/pending-approval' : '/leaves/pending-manager';
+
   const [dashData, setDashData] = useState(null);
-  const [allLeaves, setAllLeaves] = useState([]);
+  const [pendingLeaves, setPendingLeaves] = useState([]);
+  const [onLeaveToday, setOnLeaveToday] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [kpis, setKpis] = useState([]);
   const [overdueTasks, setOverdueTasks] = useState([]);
@@ -51,31 +60,43 @@ export default function PMODashboardPage() {
   const [approvingId, setApprovingId] = useState(null);
 
   useEffect(() => {
+    // On Leave Today: Super Admin reads all approved leave (filtered client-side);
+    // SENIOR reads their own team's approved-today leave (filtered server-side).
+    const todayEndpoint = isSuperAdmin ? '/leaves/all' : '/leaves/team-approved';
+    const todayStr = new Date().toISOString().slice(0, 10);
     Promise.all([
       api.get('/dashboard/me'),
-      api.get('/leaves/all'),
+      api.get(pendingEndpoint),
       api.get('/notifications/me'),
       api.get('/kpis/my-team'),
       api.get('/tasks/overdue'),
+      api.get(todayEndpoint),
     ])
-      .then(([d, l, n, k, o]) => {
+      .then(([d, p, n, k, o, t]) => {
         setDashData(d.data);
-        setAllLeaves(l.data || []);
+        setPendingLeaves(p.data || []);
         setNotifications(n.data || []);
         setKpis(k.data || []);
         setOverdueTasks(o.data || []);
+        setOnLeaveToday(
+          (t.data || []).filter(
+            (l) => l.status === 'APPROVED' && l.startDate <= todayStr && l.endDate >= todayStr
+          )
+        );
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLeave = async (id, action) => {
     setApprovingId(id + action);
     try {
-      await api.patch(`/leaves/${id}/${action}`);
+      const status = action === 'approve' ? 'APPROVED' : 'REJECTED';
+      const reviewPath = isSuperAdmin ? `/leaves/${id}/final-review` : `/leaves/${id}/manager-review`;
+      await api.patch(reviewPath, { status });
       toast.success(action === 'approve' ? 'Leave approved' : 'Leave rejected');
-      const { data } = await api.get('/leaves/all');
-      setAllLeaves(data);
+      const { data } = await api.get(pendingEndpoint);
+      setPendingLeaves(data || []);
     } catch (err) {
       toast.error(err.response?.data?.message || `Failed to ${action}`);
     } finally {
@@ -92,15 +113,7 @@ export default function PMODashboardPage() {
 
   const mgmtScore = dashData?.performance?.managementScore ?? 0;
 
-  const pendingLeaves = allLeaves.filter((l) => l.status === 'PENDING');
-
   const unread = notifications.filter((n) => !n.isRead).length;
-
-  const today = new Date().toISOString().slice(0, 10);
-
-  const onLeaveToday = allLeaves.filter((l) =>
-    l.status === 'APPROVED' && l.startDate <= today && l.endDate >= today
-  );
 
   const allTasks = kpis.flatMap((kpi) =>
     (kpi.tasks || kpi.Tasks || []).map((t) => ({
@@ -250,14 +263,14 @@ export default function PMODashboardPage() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: 12, fontWeight: 600, flexShrink: 0,
                     }}>
-                      {initials(leave.Employee?.User?.name || '?')}
+                      {initials(leave.employee?.name || '?')}
                     </div>
                     <div style={{ flex: 1 }}>
                       <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: C.dark }}>
-                        {leave.Employee?.User?.name || 'Unknown'}
+                        {leave.employee?.name || 'Unknown'}
                       </p>
                       <p style={{ margin: 0, fontSize: 12, color: C.muted }}>
-                        {leave.leaveType} · Until {formatDate(leave.endDate)}
+                        {formatType(leave.leaveType)} · Until {formatDate(leave.endDate)}
                       </p>
                     </div>
                     <Badge status="APPROVED" />
@@ -294,10 +307,10 @@ export default function PMODashboardPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                     <div>
                       <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: C.dark }}>
-                        {leave.Employee?.User?.name || 'Unknown'}
+                        {leave.employee?.name || 'Unknown'}
                       </p>
                       <p style={{ margin: '2px 0 0', fontSize: 12, color: C.muted }}>
-                        {leave.leaveType} · {formatDate(leave.startDate)} → {formatDate(leave.endDate)} · {leave.totalDays} day{leave.totalDays !== 1 ? 's' : ''}
+                        {formatType(leave.leaveType)} · {formatDate(leave.startDate)} → {formatDate(leave.endDate)} · {leave.daysCount} day{Number(leave.daysCount) !== 1 ? 's' : ''}
                       </p>
                     </div>
                     <Badge status="PENDING" />

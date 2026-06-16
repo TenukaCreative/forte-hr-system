@@ -11,7 +11,7 @@ const {
 const auth = require('../middleware/auth');
 const { authorize } = require('../middleware/rbac');
 
-const pmoOnly = authorize('HEAD_OF_PMO', 'SUPER_ADMIN');
+const pmoOnly = authorize('SENIOR', 'SUPER_ADMIN');
 
 // All authenticated roles
 router.get('/my', auth, getMyTasks);

@@ -7,8 +7,8 @@ import { NAV } from './navConfig';
 import forteLogo from '../../assets/forte-logo.webp';
 
 export default function Sidebar() {
-  const { user, logout } = useAuth();
-  const sections = NAV[user?.role] || [];
+  const { user, logout, resolvedRole } = useAuth();
+  const sections = NAV[resolvedRole] || [];
 
   // The JWT name can be stale after an HR edit — pull the live name from /auth/me.
   const [name, setName] = useState(user?.name);
@@ -53,7 +53,7 @@ export default function Sidebar() {
         <div className="user-avatar">{initials}</div>
         <div className="user-info">
           <p className="user-name">{name}</p>
-          <p className="user-role">{user?.role?.replace(/_/g, ' ')}</p>
+          <p className="user-role">{user?.designation ?? ''}</p>
         </div>
         <button className="logout-btn" onClick={logout} title="Logout">
           <LogOut size={16} />

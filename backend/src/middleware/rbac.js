@@ -1,7 +1,10 @@
-const authorize = (...roles) => {
+const resolveRole = require('../utils/resolveRole');
+
+const authorize = (...allowedRoles) => {
   return (req, res, next) => {
-    if (!req.user || !roles.includes(req.user.role)) {
-      return res.status(403).json({ message: 'Forbidden: insufficient permissions' });
+    const resolvedRole = resolveRole(req.user?.designation);
+    if (!allowedRoles.includes(resolvedRole)) {
+      return res.status(403).json({ message: 'Forbidden' });
     }
     next();
   };

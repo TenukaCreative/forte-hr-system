@@ -10,7 +10,7 @@ const getMyTeamKpis = async (req, res, next) => {
         {
           model: Employee,
           attributes: ['id', 'department', 'designation'],
-          include: [{ model: User, attributes: ['id', 'name', 'role'] }],
+          include: [{ model: User, attributes: ['id', 'name', 'jobTitle'] }],
         },
         { model: Team, as: 'team', attributes: ['id', 'name'] },
         { model: Task, as: 'tasks' },
@@ -33,7 +33,7 @@ const getKPIsByTeam = async (req, res, next) => {
         {
           model: Employee,
           attributes: ['id', 'department', 'designation'],
-          include: [{ model: User, attributes: ['id', 'name', 'role'] }],
+          include: [{ model: User, attributes: ['id', 'name', 'jobTitle'] }],
         },
         { model: Team, as: 'team', attributes: ['id', 'name'] },
         { model: Task, as: 'tasks' },

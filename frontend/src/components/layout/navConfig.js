@@ -7,7 +7,6 @@ import {
   Users2,
   ClipboardList,
   CheckSquare,
-  Settings,
 } from 'lucide-react';
 
 export const NAV = {
@@ -29,7 +28,7 @@ export const NAV = {
       ],
     },
   ],
-  HEAD_OF_PMO: [
+  SENIOR: [
     {
       section: 'PERSONAL',
       items: [
@@ -47,7 +46,7 @@ export const NAV = {
       ],
     },
   ],
-  PM: [
+  PMO_MEMBER: [
     {
       section: 'PERSONAL',
       items: [
@@ -58,30 +57,13 @@ export const NAV = {
       ],
     },
   ],
-  BA: [
-    {
-      section: 'PERSONAL',
-      items: [
-        { icon: LayoutDashboard, label: 'Dashboard',        path: '/dashboard' },
-        { icon: BarChart2,       label: 'My Performance',   path: '/performance' },
-        { icon: CalendarDays,    label: 'My Leave',         path: '/leave' },
-        { icon: Calendar,        label: 'Company Calendar', path: '/calendar' },
-      ],
-    },
-  ],
-  IT: [
+  STAFF: [
     {
       section: 'PERSONAL',
       items: [
         { icon: LayoutDashboard, label: 'Dashboard',        path: '/dashboard' },
         { icon: CalendarDays,    label: 'My Leave',         path: '/leave' },
         { icon: Calendar,        label: 'Company Calendar', path: '/calendar' },
-      ],
-    },
-    {
-      section: 'IT ADMIN',
-      items: [
-        { icon: Settings, label: 'System Users', path: '/system-users' },
       ],
     },
   ],

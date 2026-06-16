@@ -6,7 +6,7 @@ const { authorize } = require('../middleware/rbac');
 
 router.get('/', auth, authorize('HR_MANAGER', 'SUPER_ADMIN'), getEmployees);
 // Specific route must come before the dynamic /:userId route
-router.get('/users', auth, authorize('HR_MANAGER', 'HEAD_OF_PMO', 'SUPER_ADMIN'), getAllUsers);
+router.get('/users', auth, authorize('HR_MANAGER', 'SENIOR', 'SUPER_ADMIN'), getAllUsers);
 router.get('/:userId', auth, authorize('HR_MANAGER', 'SUPER_ADMIN'), getEmployee);
 router.post('/:userId', auth, authorize('HR_MANAGER', 'SUPER_ADMIN'), createEmployee);
 router.put('/:userId', auth, authorize('HR_MANAGER', 'SUPER_ADMIN'), updateEmployee);

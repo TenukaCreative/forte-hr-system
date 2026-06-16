@@ -3,6 +3,19 @@ import { loginWithAzure, logoutFromAzure } from '../auth/authService';
 
 const AuthContext = createContext(null);
 
+function resolveRole(designation) {
+  if (!designation) return 'STAFF';
+  const lower = designation.trim().toLowerCase();
+
+  if (lower === 'super admin') return 'SUPER_ADMIN';
+  if (lower === 'hr manager') return 'HR_MANAGER';
+  if (lower.startsWith('head of') || lower.endsWith('lead')) return 'SENIOR';
+  if (lower === 'project manager' || lower === 'pm') return 'PMO_MEMBER';
+  if (lower === 'business analyst' || lower === 'ba') return 'PMO_MEMBER';
+
+  return 'STAFF';
+}
+
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem('forte_token'));
   const [user, setUser] = useState(() => {
@@ -29,7 +42,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ token, user, isAuthenticated: !!token, login, logout }}>
+    <AuthContext.Provider value={{ token, user, isAuthenticated: !!token, login, logout, resolvedRole: resolveRole(user?.designation) }}>
       {children}
     </AuthContext.Provider>
   );

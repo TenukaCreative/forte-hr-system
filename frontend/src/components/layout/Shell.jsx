@@ -1,8 +1,7 @@
-import { useLocation, NavLink } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
-import { useAuth } from '../../context/AuthContext';
-import { NAV } from './navConfig';
+import BottomNav from './BottomNav';
 import './Shell.css';
 
 const PAGE_TITLES = {
@@ -20,15 +19,9 @@ const PAGE_TITLES = {
 
 export default function Shell({ children }) {
   const { pathname } = useLocation();
-  const { user } = useAuth();
 
   const title = PAGE_TITLES[pathname]
     ?? (pathname.startsWith('/employees/') ? 'Employee Profile' : '');
-
-  // Mobile bottom nav: first 4 items across all sections
-  const mobileItems = (NAV[user?.role] || [])
-    .flatMap((s) => s.items)
-    .slice(0, 4);
 
   return (
     <div className="shell">
@@ -45,22 +38,7 @@ export default function Shell({ children }) {
         </main>
       </div>
 
-      {/* Mobile bottom nav */}
-      <nav className="shell-mobile-nav">
-        {mobileItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) => `mobile-nav-btn${isActive ? ' active' : ''}`}
-            >
-              <Icon size={22} />
-              <span>{item.label.split(' ')[0]}</span>
-            </NavLink>
-          );
-        })}
-      </nav>
+      <BottomNav />
     </div>
   );
 }

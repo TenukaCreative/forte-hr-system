@@ -11,7 +11,7 @@ const getEmployees = async (req, res, next) => {
       id: u.id,
       name: u.name,
       email: u.email,
-      role: u.role,
+      designation: u.jobTitle,
       isActive: u.isActive,
       employee: u.Employee ? {
         id: u.Employee.id,
@@ -34,7 +34,7 @@ const getEmployees = async (req, res, next) => {
 const getAllUsers = async (req, res, next) => {
   try {
     const users = await User.findAll({
-      attributes: ['id', 'name', 'email', 'role'],
+      attributes: ['id', 'name', 'email', 'jobTitle'],
       where: { isActive: true },
       include: [{ model: Employee, attributes: ['id'], required: false }],
       order: [['name', 'ASC']],
@@ -44,7 +44,7 @@ const getAllUsers = async (req, res, next) => {
       id: u.id,
       name: u.name,
       email: u.email,
-      role: u.role,
+      designation: u.jobTitle,
       employee: u.Employee ? { id: u.Employee.id } : null,
     })));
   } catch (err) {
@@ -84,11 +84,10 @@ const createEmployee = async (req, res, next) => {
     const existing = await Employee.findOne({ where: { userId } });
     if (existing) return res.status(400).json({ message: 'Employee record already exists for this user' });
 
-    const { name, role, employeeCode, department, designation, joinDate, contactNumber, address, emergencyContact, emergencyPhone } = req.body;
+    const { name, employeeCode, department, designation, joinDate, contactNumber, address, emergencyContact, emergencyPhone } = req.body;
 
     const userUpdates = {};
     if (name) userUpdates.name = name;
-    if (role) userUpdates.role = role;
     if (Object.keys(userUpdates).length) {
       await User.update(userUpdates, { where: { id: userId } });
     }
@@ -106,11 +105,10 @@ const updateEmployee = async (req, res, next) => {
     const employee = await Employee.findOne({ where: { userId } });
     if (!employee) return res.status(404).json({ message: 'Employee record not found' });
 
-    const { name, role, employeeCode, department, designation, joinDate, contactNumber, address, emergencyContact, emergencyPhone } = req.body;
+    const { name, employeeCode, department, designation, joinDate, contactNumber, address, emergencyContact, emergencyPhone } = req.body;
 
     const userUpdates = {};
     if (name) userUpdates.name = name;
-    if (role) userUpdates.role = role;
     if (Object.keys(userUpdates).length) {
       await User.update(userUpdates, { where: { id: userId } });
     }

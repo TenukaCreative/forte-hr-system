@@ -3,17 +3,25 @@ import { toast } from 'react-hot-toast';
 import { CheckCircle, XCircle, Clock, Calendar } from 'lucide-react';
 import Shell from '../../components/layout/Shell';
 import api from '../../api/axios';
+import { useAuth } from '../../context/AuthContext';
+import { Button, Tabs } from '../../components/ui';
+import LeaveDetailModal from '../../components/leave/LeaveDetailModal';
+import TeamLeaveGantt from '../../components/leave/TeamLeaveGantt';
 
 const STATUS_STYLES = {
-  PENDING:  { bg: '#FEF3C7', color: '#D97706', label: 'Pending' },
-  APPROVED: { bg: '#DCFCE7', color: '#16A34A', label: 'Approved' },
-  REJECTED: { bg: '#FEE2E2', color: '#DC2626', label: 'Rejected' },
+  PENDING:          { bg: '#FEF3C7', color: '#D97706', label: 'Pending' },
+  MANAGER_APPROVED: { bg: '#DBEAFE', color: '#2563EB', label: 'Manager Approved' },
+  APPROVED:         { bg: '#DCFCE7', color: '#16A34A', label: 'Approved' },
+  REJECTED:         { bg: '#FEE2E2', color: '#DC2626', label: 'Rejected' },
 };
 
 const TYPE_STYLES = {
   PAID:   { bg: '#DCFCE7', color: '#16A34A' },
   UNPAID: { bg: '#FEF3C7', color: '#D97706' },
 };
+
+const formatType = (t) =>
+  t ? t.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : '—';
 
 const formatDate = (iso) =>
   iso
@@ -63,10 +71,11 @@ function SummaryCard({ label, count, sub, Icon, color, iconBg }) {
   );
 }
 
-export default function LeaveOverview() {
+// ── Tab 1: All Requests ───────────────────────────────────────
+function AllRequestsView() {
   const [leaves, setLeaves] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [acting, setActing] = useState(null);
+  const [selectedRequest, setSelectedRequest] = useState(null);
 
   const fetchLeaves = async () => {
     try {
@@ -78,47 +87,20 @@ export default function LeaveOverview() {
 
   useEffect(() => { fetchLeaves(); }, []);
 
-  const handle = async (id, action) => {
-    setActing(id + action);
-    try {
-      const { data } = await api.patch(`/leaves/${id}/${action}`);
-      toast.success(data.message || (action === 'approve' ? 'Leave approved' : 'Leave rejected'));
-      fetchLeaves();
-    } catch (err) {
-      toast.error(err.response?.data?.message || `Failed to ${action} leave`);
-    } finally { setActing(null); }
-  };
-
   const counts = {
-    pending:  leaves.filter((l) => l.status === 'PENDING').length,
+    pending:  leaves.filter((l) => l.status === 'PENDING' || l.status === 'MANAGER_APPROVED').length,
     approved: leaves.filter((l) => l.status === 'APPROVED').length,
     rejected: leaves.filter((l) => l.status === 'REJECTED').length,
   };
 
-  if (loading) return <Shell><div className="spinner-full"><div className="spinner" /></div></Shell>;
+  if (loading) return <div className="spinner-full"><div className="spinner" /></div>;
 
   return (
-    <Shell>
+    <>
       <style>{`
         .lo-row { transition: background 0.15s; }
         .lo-row:hover td { background: #FAFAF7; }
-        .lo-approve { background: #16A34A; color: #fff; border: none; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.15s, opacity 0.15s; }
-        .lo-approve:hover:not(:disabled) { background: #15803d; }
-        .lo-approve:disabled { opacity: 0.5; cursor: not-allowed; }
-        .lo-reject { background: #fff; color: #DC2626; border: 1.5px solid #DC2626; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.15s, opacity 0.15s; }
-        .lo-reject:hover:not(:disabled) { background: #FEE2E2; }
-        .lo-reject:disabled { opacity: 0.5; cursor: not-allowed; }
       `}</style>
-
-      {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700, color: '#15161A', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
-          Leave Overview
-        </h1>
-        <p style={{ fontSize: 14, color: 'rgba(21,22,26,0.5)', margin: 0 }}>
-          {leaves.length} total request{leaves.length === 1 ? '' : 's'}
-        </p>
-      </div>
 
       {/* Summary cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: 28 }}>
@@ -154,7 +136,7 @@ export default function LeaveOverview() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#FAFAF7', borderBottom: '1px solid #E4E3DC' }}>
-                {['Employee', 'Department', 'Type', 'From', 'To', 'Days', 'Reason', 'Status', 'Actions'].map((h) => (
+                {['Employee', 'Department', 'Type', 'From', 'To', 'Days', 'Reason', 'Status'].map((h) => (
                   <th key={h} style={{
                     textAlign: h === 'Days' ? 'center' : 'left',
                     padding: '12px 16px',
@@ -173,14 +155,13 @@ export default function LeaveOverview() {
               {leaves.map((l, i) => {
                 const sStyle = STATUS_STYLES[l.status] || STATUS_STYLES.PENDING;
                 const tStyle = TYPE_STYLES[l.leaveType] || TYPE_STYLES.PAID;
-                const isPending = l.status === 'PENDING';
-                const name = l.Employee?.User?.name;
+                const name = l.employee?.name;
                 const isLast = i === leaves.length - 1;
                 const cellBase = { padding: '14px 16px', fontSize: 14, color: '#15161A', verticalAlign: 'middle' };
                 const rowBorder = isLast ? 'none' : '1px solid #E4E3DC';
 
                 return (
-                  <tr key={l.id} className="lo-row" style={{ borderBottom: rowBorder }}>
+                  <tr key={l.id} className="lo-row" onClick={() => setSelectedRequest(l)} style={{ borderBottom: rowBorder, cursor: 'pointer' }}>
                     {/* Employee with avatar */}
                     <td style={{ ...cellBase, fontWeight: 600 }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', flexDirection: 'row' }}>
@@ -199,7 +180,7 @@ export default function LeaveOverview() {
 
                     {/* Department */}
                     <td style={{ ...cellBase, color: 'rgba(21,22,26,0.5)', fontSize: 13 }}>
-                      {l.Employee?.department || '—'}
+                      {l.employee?.department || '—'}
                     </td>
 
                     {/* Type pill */}
@@ -209,7 +190,7 @@ export default function LeaveOverview() {
                         borderRadius: 100, padding: '3px 10px',
                         fontSize: 11, fontWeight: 600,
                       }}>
-                        {l.leaveType}
+                        {formatType(l.leaveType)}
                       </span>
                     </td>
 
@@ -220,7 +201,7 @@ export default function LeaveOverview() {
                     <td style={{ ...cellBase, fontSize: 13 }}>{formatDate(l.endDate)}</td>
 
                     {/* Days */}
-                    <td style={{ ...cellBase, fontWeight: 600, textAlign: 'center' }}>{l.totalDays}</td>
+                    <td style={{ ...cellBase, fontWeight: 600, textAlign: 'center' }}>{l.daysCount}</td>
 
                     {/* Reason */}
                     <td
@@ -248,32 +229,6 @@ export default function LeaveOverview() {
                         {sStyle.label}
                       </span>
                     </td>
-
-                    {/* Actions */}
-                    <td style={cellBase}>
-                      {isPending ? (
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <button
-                            className="lo-approve"
-                            disabled={!!acting}
-                            onClick={() => handle(l.id, 'approve')}
-                            style={acting === l.id + 'approve' ? { opacity: 0.6 } : undefined}
-                          >
-                            {acting === l.id + 'approve' ? '…' : 'Approve'}
-                          </button>
-                          <button
-                            className="lo-reject"
-                            disabled={!!acting}
-                            onClick={() => handle(l.id, 'reject')}
-                            style={acting === l.id + 'reject' ? { opacity: 0.6 } : undefined}
-                          >
-                            {acting === l.id + 'reject' ? '…' : 'Reject'}
-                          </button>
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: 14, color: 'rgba(21,22,26,0.25)', display: 'block', textAlign: 'center' }}>—</span>
-                      )}
-                    </td>
                   </tr>
                 );
               })}
@@ -281,6 +236,179 @@ export default function LeaveOverview() {
           </table>
         )}
       </div>
+
+      {selectedRequest && (
+        <LeaveDetailModal
+          request={selectedRequest}
+          mode="final"
+          readOnly={selectedRequest.status !== 'MANAGER_APPROVED'}
+          onClose={() => setSelectedRequest(null)}
+          onAction={() => {
+            setSelectedRequest(null);
+            fetchLeaves();
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+// ── Tabs 2 & 3: Approvals (manager Step 1 / final Step 2) ─────
+function ApprovalsView({ kind }) {
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedRequest, setSelectedRequest] = useState(null);
+
+  const endpoint = kind === 'team' ? '/leaves/pending-manager' : '/leaves/pending-approval';
+
+  const load = () =>
+    api.get(endpoint).then((r) => setRequests(r.data || [])).catch(() => toast.error('Failed to load requests'));
+
+  useEffect(() => { load().finally(() => setLoading(false)); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (loading) return <div className="spinner-full"><div className="spinner" /></div>;
+
+  if (requests.length === 0) {
+    return (
+      <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: '48px 24px', textAlign: 'center' }}>
+        <Calendar size={40} style={{ color: 'rgba(21,22,26,0.15)', marginBottom: 12 }} />
+        <p style={{ margin: 0, fontSize: 16, fontWeight: 500, color: 'rgba(21,22,26,0.4)' }}>Nothing to review</p>
+        <p style={{ margin: '4px 0 0', fontSize: 13, color: 'rgba(21,22,26,0.3)' }}>
+          There are no requests awaiting your decision.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {requests.map((r) => {
+          const sStyle = STATUS_STYLES[r.status] || STATUS_STYLES.PENDING;
+          return (
+            <div key={r.id} style={{ background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#15161A' }}>{r.employee?.name || 'Employee'}</p>
+                  <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(21,22,26,0.5)' }}>{r.employee?.jobTitle || r.employee?.email}</p>
+                </div>
+                <span style={{ background: sStyle.bg, color: sStyle.color, borderRadius: 100, padding: '4px 12px', fontSize: 11, fontWeight: 600 }}>
+                  {sStyle.label}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, fontSize: 13, color: '#15161A', marginBottom: 12 }}>
+                <span><strong style={{ color: 'rgba(21,22,26,0.5)', fontWeight: 600 }}>Type:</strong> {formatType(r.leaveType)}</span>
+                <span><strong style={{ color: 'rgba(21,22,26,0.5)', fontWeight: 600 }}>Dates:</strong> {formatDate(r.startDate)} → {formatDate(r.endDate)}</span>
+                <span><strong style={{ color: 'rgba(21,22,26,0.5)', fontWeight: 600 }}>Days:</strong> {r.daysCount}</span>
+              </div>
+
+              {r.reason && (
+                <p style={{ fontSize: 13, color: '#15161A', margin: '0 0 12px', padding: '10px 12px', background: '#FAFAF7', border: '1px solid #E4E3DC', borderRadius: 8 }}>
+                  {r.reason}
+                </p>
+              )}
+
+              {kind === 'final' && r.manager && (
+                <p style={{ fontSize: 12, color: 'rgba(21,22,26,0.5)', margin: '0 0 12px' }}>
+                  Approved by manager: <strong style={{ color: '#15161A' }}>{r.manager.name}</strong>
+                  {r.managerNote ? ` — “${r.managerNote}”` : ''}
+                </p>
+              )}
+
+              <Button onClick={() => setSelectedRequest(r)} style={{ padding: '6px 14px', fontSize: 12 }}>Review</Button>
+            </div>
+          );
+        })}
+      </div>
+
+      {selectedRequest && (
+        <LeaveDetailModal
+          request={selectedRequest}
+          mode={kind === 'team' ? 'manager' : 'final'}
+          onClose={() => setSelectedRequest(null)}
+          onAction={() => {
+            setSelectedRequest(null);
+            load();
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+// ── Tab 4: Team Leave (Gantt timeline, view-only) ─────────────
+function TeamLeaveView() {
+  const { resolvedRole } = useAuth();
+  const isHr = resolvedRole === 'HR_MANAGER' || resolvedRole === 'SUPER_ADMIN';
+
+  const [teamLeaves, setTeamLeaves] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedRequest, setSelectedRequest] = useState(null);
+
+  useEffect(() => {
+    // HR / Super Admin see all leaves; SENIOR sees their direct reports' approved leaves.
+    const endpoint = isHr ? '/leaves/all' : '/leaves/team-approved';
+    api.get(endpoint)
+      .then((r) => setTeamLeaves(r.data || []))
+      .catch(() => toast.error('Failed to load team leaves'))
+      .finally(() => setLoading(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (loading) return <div className="spinner-full"><div className="spinner" /></div>;
+
+  return (
+    <>
+      <TeamLeaveGantt requests={teamLeaves} onSelectRequest={(r) => setSelectedRequest(r)} />
+
+      {selectedRequest && (
+        <LeaveDetailModal
+          request={selectedRequest}
+          mode="final"
+          readOnly
+          onClose={() => setSelectedRequest(null)}
+        />
+      )}
+    </>
+  );
+}
+
+export default function LeaveOverview() {
+  const { resolvedRole } = useAuth();
+  const isSenior = resolvedRole === 'SENIOR' || resolvedRole === 'SUPER_ADMIN';
+  const isHr = resolvedRole === 'HR_MANAGER' || resolvedRole === 'SUPER_ADMIN';
+
+  const tabs = [];
+  if (isHr) tabs.push({ key: 'all', label: 'All Requests' });
+  if (isSenior) tabs.push({ key: 'team', label: 'Team Approvals' });
+  if (isHr) tabs.push({ key: 'final', label: 'Final Approvals' });
+  if (isHr || isSenior) tabs.push({ key: 'team-leave', label: 'Team Leave' });
+
+  const [tab, setTab] = useState(null);
+  const activeTab = tab || tabs[0]?.key;
+
+  return (
+    <Shell>
+      {/* Header */}
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 28, fontWeight: 700, color: '#15161A', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+          Leave Overview
+        </h1>
+        <p style={{ fontSize: 14, color: 'rgba(21,22,26,0.5)', margin: 0 }}>
+          Review and manage leave requests
+        </p>
+      </div>
+
+      {tabs.length > 1 && (
+        <div style={{ marginBottom: 24 }}>
+          <Tabs tabs={tabs} active={activeTab} onChange={setTab} />
+        </div>
+      )}
+
+      {activeTab === 'all' && <AllRequestsView />}
+      {activeTab === 'team' && <ApprovalsView kind="team" />}
+      {activeTab === 'final' && <ApprovalsView kind="final" />}
+      {activeTab === 'team-leave' && <TeamLeaveView />}
     </Shell>
   );
 }

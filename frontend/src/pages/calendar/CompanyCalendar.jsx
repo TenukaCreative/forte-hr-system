@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Shell from '../../components/layout/Shell';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -22,6 +23,7 @@ function datesInRange(start, end) {
 }
 
 export default function CompanyCalendar() {
+  const { resolvedRole } = useAuth();
   const [leaves, setLeaves] = useState([]);
   const [outlookEvents, setOutlookEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +31,9 @@ export default function CompanyCalendar() {
   const [viewDate, setViewDate] = useState(new Date());
 
   useEffect(() => {
-    api.get('/leaves/all')
+    // HR / Super Admin see everyone's approved leave; other roles only their own.
+    const isHr = resolvedRole === 'HR_MANAGER' || resolvedRole === 'SUPER_ADMIN';
+    api.get(isHr ? '/leaves/all' : '/leaves/my')
       .then((r) => setLeaves(r.data.filter((l) => l.status === 'APPROVED')))
       .catch(() => toast.error('Failed to load calendar'))
       .finally(() => setLoading(false));
@@ -39,7 +43,7 @@ export default function CompanyCalendar() {
     api.get('/calendar/outlook')
       .then((r) => setOutlookEvents(r.data || []))
       .catch(() => {});
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const year  = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -120,7 +124,7 @@ export default function CompanyCalendar() {
                 {dayLeaves.slice(0, 3).map((l, idx) => (
                   <div
                     key={idx}
-                    title={l.Employee?.User?.name}
+                    title={l.employee?.name}
                     style={{
                       marginTop: 3,
                       borderRadius: 3,
@@ -134,7 +138,7 @@ export default function CompanyCalendar() {
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {l.Employee?.User?.name?.split(' ')[0] || 'Leave'}
+                    {l.employee?.name?.split(' ')[0] || 'Leave'}
                   </div>
                 ))}
                 {dayLeaves.length > 3 && (

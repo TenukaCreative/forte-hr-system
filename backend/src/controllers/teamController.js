@@ -43,7 +43,7 @@ const getTeam = async (req, res, next) => {
       where: { id: req.params.teamId, createdBy: req.user.id },
       include: [{
         model: TeamMember,
-        include: [{ model: User, attributes: ['id', 'name', 'email', 'role'] }],
+        include: [{ model: User, attributes: ['id', 'name', 'email', 'jobTitle'] }],
       }],
     });
     if (!team) return res.status(404).json({ message: 'Team not found' });
@@ -58,7 +58,7 @@ const getTeam = async (req, res, next) => {
         id: tm.User?.id,
         name: tm.User?.name,
         email: tm.User?.email,
-        role: tm.User?.role,
+        designation: tm.User?.jobTitle,
       })),
     });
   } catch (err) {
@@ -111,7 +111,7 @@ const addMember = async (req, res, next) => {
 
     const members = await TeamMember.findAll({
       where: { teamId },
-      include: [{ model: User, attributes: ['id', 'name', 'email', 'role'] }],
+      include: [{ model: User, attributes: ['id', 'name', 'email', 'jobTitle'] }],
     });
 
     res.status(201).json(members.map((tm) => ({
@@ -119,7 +119,7 @@ const addMember = async (req, res, next) => {
       id: tm.User?.id,
       name: tm.User?.name,
       email: tm.User?.email,
-      role: tm.User?.role,
+      designation: tm.User?.jobTitle,
     })));
   } catch (err) {
     next(err);

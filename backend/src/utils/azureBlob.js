@@ -14,11 +14,25 @@ const getClient = () => {
   return new BlobServiceClient(`https://${accountName}.blob.core.windows.net`, credential);
 };
 
+// Resolve the storage container + blob folder for a given container type.
+//   'docs'   → forte-hr-docs    (employeeDocs/)
+//   'photos' → forte-hr-photos  (profilePhotos/)
+//   'leaves' → fortehrleaves    (leaveDocs/)
+const resolveContainer = (containerType) => {
+  if (containerType === 'photos') return process.env.AZURE_STORAGE_PHOTOS_CONTAINER;
+  if (containerType === 'leaves') return process.env.AZURE_STORAGE_LEAVES_CONTAINER || 'forte-hr-leaves';
+  return process.env.AZURE_STORAGE_CONTAINER_NAME;
+};
+
+const folderFor = (containerType) => {
+  if (containerType === 'photos') return 'profilePhotos';
+  if (containerType === 'leaves') return 'leaveDocs';
+  return 'employeeDocs';
+};
+
 const uploadToBlob = async (fileName, fileBuffer, mimeType, containerType = 'docs') => {
-  const containerName = containerType === 'photos'
-    ? process.env.AZURE_STORAGE_PHOTOS_CONTAINER
-    : process.env.AZURE_STORAGE_CONTAINER_NAME;
-  const folder = containerType === 'photos' ? 'profilePhotos' : 'employeeDocs';
+  const containerName = resolveContainer(containerType);
+  const folder = folderFor(containerType);
   const blobName = `${folder}/${crypto.randomUUID()}-${fileName}`;
   const client = getClient();
 
@@ -62,10 +76,10 @@ const deleteFromBlob = async (fileUrl) => {
   }
 };
 
-const generateSasUrl = (fileUrl) => {
+const generateSasUrl = (fileUrl, containerType = 'docs') => {
   const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME;
   const accountKey = process.env.AZURE_STORAGE_ACCESS_KEY;
-  const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME;
+  const containerName = resolveContainer(containerType);
 
   // Dev placeholder URLs — return as-is
   if (!accountName || !accountKey || !containerName || fileUrl.startsWith('http://dev-placeholder')) {

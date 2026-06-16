@@ -1,155 +1,348 @@
-const { LeaveRequest, Employee, User, Notification } = require('../models');
-const {
-  sendLeaveSubmittedEmail,
-  sendLeaveApprovedEmail,
-  sendLeaveRejectedEmail,
-} = require('../services/emailService');
+const { Op } = require('sequelize');
+const { LeaveRequest, LeaveEntitlement, User } = require('../models');
+const resolveRole = require('../utils/resolveRole');
 
-const requestLeave = async (req, res, next) => {
+// ── ENTITLEMENTS ──────────────────────────────────────────────
+
+// POST /api/leaves/entitlement
+// HR assigns entitlement to an employee for a year
+const assignEntitlement = async (req, res, next) => {
   try {
-    const { startDate, endDate, leaveType, reason } = req.body;
+    const { employeeId, year, totalDays } = req.body;
+    const existing = await LeaveEntitlement.findOne({
+      where: { employeeId, year },
+    });
+    if (existing) {
+      await existing.update({ totalDays, assignedBy: req.user.id });
+      return res.json(existing);
+    }
+    const entitlement = await LeaveEntitlement.create({
+      employeeId,
+      year,
+      totalDays: totalDays || 18.0,
+      assignedBy: req.user.id,
+    });
+    res.status(201).json(entitlement);
+  } catch (err) {
+    next(err);
+  }
+};
 
-    const employee = await Employee.findOne({ where: { userId: req.user.id } });
-    if (!employee) return res.status(400).json({ message: 'No employee record found. Contact HR.' });
+// GET /api/leaves/entitlement/:employeeId
+// Get entitlement for current year for an employee
+const getEntitlement = async (req, res, next) => {
+  try {
+    const year = new Date().getFullYear();
+    const entitlement = await LeaveEntitlement.findOne({
+      where: { employeeId: req.params.employeeId, year },
+    });
+    res.json(entitlement || { totalDays: 0, usedDays: 0, year });
+  } catch (err) {
+    next(err);
+  }
+};
 
-    const totalDays = Math.ceil(
-      (new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)
-    ) + 1;
+// GET /api/leaves/entitlement/me
+// Current user views their own entitlement for the current year
+const getMyEntitlement = async (req, res, next) => {
+  try {
+    const year = new Date().getFullYear();
+    const entitlement = await LeaveEntitlement.findOne({
+      where: { employeeId: req.user.id, year },
+    });
+    res.json(entitlement || { totalDays: 0, usedDays: 0, year });
+  } catch (err) {
+    next(err);
+  }
+};
 
-    const leave = await LeaveRequest.create({
-      employeeId: employee.id,
+// ── LEAVE REQUESTS ────────────────────────────────────────────
+
+// POST /api/leaves/request
+// Employee submits a leave request
+const submitRequest = async (req, res, next) => {
+  try {
+    const { leaveType, startDate, endDate, reason } = req.body;
+    const employeeId = req.user.id;
+    const year = new Date(startDate).getFullYear();
+
+    // Check entitlement exists
+    const entitlement = await LeaveEntitlement.findOne({
+      where: { employeeId, year },
+    });
+    if (!entitlement) {
+      return res.status(400).json({
+        message: 'No leave entitlement assigned for this year. Contact HR.',
+      });
+    }
+
+    // Calculate days
+    let daysCount;
+    if (leaveType === 'HALF_DAY') {
+      daysCount = 0.5;
+    } else {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      daysCount = Math.round(((end - start) / (1000 * 60 * 60 * 24) + 1) * 2) / 2;
+    }
+
+    // Check balance
+    const remaining = entitlement.totalDays - entitlement.usedDays;
+    if (daysCount > remaining) {
+      return res.status(400).json({
+        message: `Insufficient leave balance. You have ${remaining} days remaining.`,
+      });
+    }
+
+    // Get reporting manager
+    const employee = await User.findByPk(employeeId);
+    const managerId = employee?.managerId || null;
+
+    const request = await LeaveRequest.create({
+      employeeId,
       leaveType,
       startDate,
       endDate,
-      totalDays,
+      daysCount,
       reason,
+      managerId,
       status: 'PENDING',
+      managerStatus: 'PENDING',
+      approverStatus: 'PENDING',
     });
 
-    const pmoUsers = await User.findAll({ where: { role: 'HEAD_OF_PMO', isActive: true } });
-    await Promise.all(
-      pmoUsers.map((u) =>
-        Notification.create({
-          userId: u.id,
-          message: `${req.user.name} has submitted a leave request for ${startDate} to ${endDate}.`,
-        })
-      )
+    res.status(201).json(request);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/leaves/my
+// Employee views their own requests
+const getMyRequests = async (req, res, next) => {
+  try {
+    const requests = await LeaveRequest.findAll({
+      where: { employeeId: req.user.id },
+      order: [['createdAt', 'DESC']],
+    });
+    res.json(requests);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/leaves/pending-manager
+// Reporting manager sees requests from direct reports at Step 1
+const getPendingForManager = async (req, res, next) => {
+  try {
+    const requests = await LeaveRequest.findAll({
+      where: { managerId: req.user.id, managerStatus: 'PENDING' },
+      include: [{ model: User, as: 'employee',
+        attributes: ['id', 'name', 'email', 'jobTitle'] }],
+      order: [['createdAt', 'DESC']],
+    });
+    res.json(requests);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /api/leaves/:id/manager-review
+// Reporting manager approves or rejects (Step 1)
+const managerReview = async (req, res, next) => {
+  try {
+    const { status, note } = req.body; // APPROVED or REJECTED
+    const request = await LeaveRequest.findByPk(req.params.id);
+    if (!request) return res.status(404).json({ message: 'Request not found' });
+    if (request.managerId !== req.user.id) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    const updates = {
+      managerStatus: status,
+      managerNote: note || null,
+    };
+
+    if (status === 'APPROVED') {
+      updates.status = 'MANAGER_APPROVED';
+      updates.approverStatus = 'PENDING';
+    } else {
+      updates.status = 'REJECTED';
+    }
+
+    await request.update(updates);
+    res.json(request);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/leaves/pending-approval
+// HR Manager / Super Admin sees all manager-approved requests
+const getPendingApproval = async (req, res, next) => {
+  try {
+    const requests = await LeaveRequest.findAll({
+      where: { status: 'MANAGER_APPROVED', approverStatus: 'PENDING' },
+      include: [
+        { model: User, as: 'employee',
+          attributes: ['id', 'name', 'email', 'jobTitle'] },
+        { model: User, as: 'manager',
+          attributes: ['id', 'name', 'email'] },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+    res.json(requests);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /api/leaves/:id/final-review
+// HR Manager / Super Admin final approval (Step 2)
+const finalReview = async (req, res, next) => {
+  try {
+    const { status, note } = req.body; // APPROVED or REJECTED
+    const request = await LeaveRequest.findByPk(req.params.id);
+    if (!request) return res.status(404).json({ message: 'Request not found' });
+    if (request.status !== 'MANAGER_APPROVED') {
+      return res.status(400).json({
+        message: 'Request has not been approved by manager yet.',
+      });
+    }
+
+    const updates = {
+      approverStatus: status,
+      approverNote: note || null,
+      approverId: req.user.id,
+    };
+
+    if (status === 'APPROVED') {
+      updates.status = 'APPROVED';
+      // Deduct balance
+      const year = new Date(request.startDate).getFullYear();
+      const entitlement = await LeaveEntitlement.findOne({
+        where: { employeeId: request.employeeId, year },
+      });
+      if (entitlement) {
+        await entitlement.update({
+          usedDays: parseFloat(entitlement.usedDays) + parseFloat(request.daysCount),
+        });
+      }
+    } else {
+      updates.status = 'REJECTED';
+    }
+
+    await request.update(updates);
+    res.json(request);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/leaves/all
+// HR Manager / Super Admin sees all requests
+const getAllRequests = async (req, res, next) => {
+  try {
+    const requests = await LeaveRequest.findAll({
+      include: [
+        { model: User, as: 'employee',
+          attributes: ['id', 'name', 'email', 'jobTitle'] },
+        { model: User, as: 'manager',
+          attributes: ['id', 'name'] },
+        { model: User, as: 'approver',
+          attributes: ['id', 'name'] },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+    res.json(requests);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/leaves/team-approved
+// Reporting manager sees their direct reports who are on approved leave today
+const getTeamApprovedLeaves = async (req, res, next) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const requests = await LeaveRequest.findAll({
+      where: {
+        managerId: req.user.id,
+        status: 'APPROVED',
+        startDate: { [Op.lte]: today },
+        endDate: { [Op.gte]: today },
+      },
+      include: [
+        {
+          model: User,
+          as: 'employee',
+          attributes: ['id', 'name', 'email', 'jobTitle'],
+        },
+      ],
+    });
+    res.json(requests);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── LEAVE DOCUMENTS ───────────────────────────────────────────
+
+// POST /api/leaves/:id/document
+// Employee attaches a supporting document to their own request
+const uploadLeaveDocument = async (req, res, next) => {
+  try {
+    const request = await LeaveRequest.findByPk(req.params.id);
+    if (!request) return res.status(404).json({ message: 'Not found' });
+    if (request.employeeId !== req.user.id) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    const { uploadToBlob } = require('../utils/azureBlob');
+    const file = req.file;
+    if (!file) return res.status(400).json({ message: 'No file provided' });
+
+    const url = await uploadToBlob(
+      file.originalname,
+      file.buffer,
+      file.mimetype,
+      'leaves'
     );
-
-    // Email notification (best-effort — never blocks the request).
-    try {
-      await sendLeaveSubmittedEmail(req.user, { leaveType, startDate, endDate });
-    } catch (err) {
-      console.error('[email] notification failed:', err.message);
-    }
-
-    res.status(201).json(leave);
+    await request.update({ documentUrl: url });
+    res.json({ documentUrl: url });
   } catch (err) {
     next(err);
   }
 };
 
-const getMyLeaves = async (req, res, next) => {
+// GET /api/leaves/:id/document
+// Returns a short-lived SAS URL for the attached document
+const getLeaveDocument = async (req, res, next) => {
   try {
-    const employee = await Employee.findOne({ where: { userId: req.user.id } });
-    if (!employee) return res.json([]);
-
-    const leaves = await LeaveRequest.findAll({
-      where: { employeeId: employee.id },
-      order: [['createdAt', 'DESC']],
-    });
-
-    res.json(leaves);
+    const request = await LeaveRequest.findByPk(req.params.id);
+    if (!request) return res.status(404).json({ message: 'Not found' });
+    if (!request.documentUrl) {
+      return res.status(404).json({ message: 'No document attached' });
+    }
+    const { generateSasUrl } = require('../utils/azureBlob');
+    const sasUrl = await generateSasUrl(request.documentUrl, 'leaves');
+    res.json({ url: sasUrl });
   } catch (err) {
     next(err);
   }
 };
 
-const getAllLeaves = async (req, res, next) => {
-  try {
-    const leaves = await LeaveRequest.findAll({
-      include: [{
-        model: Employee,
-        attributes: ['department', 'designation'],
-        include: [{ model: User, attributes: ['name', 'email'] }],
-      }],
-      order: [['createdAt', 'DESC']],
-    });
-
-    res.json(leaves);
-  } catch (err) {
-    next(err);
-  }
+module.exports = {
+  assignEntitlement,
+  getEntitlement,
+  getMyEntitlement,
+  submitRequest,
+  getMyRequests,
+  getPendingForManager,
+  managerReview,
+  getPendingApproval,
+  finalReview,
+  getAllRequests,
+  getTeamApprovedLeaves,
+  uploadLeaveDocument,
+  getLeaveDocument,
 };
-
-const approveLeave = async (req, res, next) => {
-  try {
-    const leave = await LeaveRequest.findByPk(req.params.id, {
-      include: [{ model: Employee, include: [{ model: User, attributes: ['id', 'name', 'email'] }] }],
-    });
-    if (!leave) return res.status(404).json({ message: 'Leave request not found' });
-    if (leave.status !== 'PENDING') return res.status(400).json({ message: 'Can only approve pending requests' });
-
-    await leave.update({ status: 'APPROVED', reviewedBy: req.user.id, reviewNote: req.body?.note || null });
-
-    if (leave.Employee?.User?.id) {
-      await Notification.create({
-        userId: leave.Employee.User.id,
-        message: `Your leave request (${leave.startDate} to ${leave.endDate}) has been approved.`,
-      });
-    }
-
-    // Email the employee the decision (best-effort).
-    try {
-      await sendLeaveApprovedEmail(leave.Employee?.User, {
-        startDate: leave.startDate,
-        endDate: leave.endDate,
-        reviewNote: req.body?.note || null,
-      });
-    } catch (err) {
-      console.error('[email] notification failed:', err.message);
-    }
-
-    res.json({ message: 'Leave approved successfully', leave });
-  } catch (err) {
-    console.error('Approve leave error:', err);
-    res.status(500).json({ message: err.message });
-  }
-};
-
-const rejectLeave = async (req, res, next) => {
-  try {
-    const leave = await LeaveRequest.findByPk(req.params.id, {
-      include: [{ model: Employee, include: [{ model: User, attributes: ['id', 'name', 'email'] }] }],
-    });
-    if (!leave) return res.status(404).json({ message: 'Leave request not found' });
-    if (leave.status !== 'PENDING') return res.status(400).json({ message: 'Can only reject pending requests' });
-
-    await leave.update({ status: 'REJECTED', reviewedBy: req.user.id, reviewNote: req.body?.note || null });
-
-    if (leave.Employee?.User?.id) {
-      await Notification.create({
-        userId: leave.Employee.User.id,
-        message: `Your leave request (${leave.startDate} to ${leave.endDate}) has been rejected.`,
-      });
-    }
-
-    // Email the employee the decision (best-effort).
-    try {
-      await sendLeaveRejectedEmail(leave.Employee?.User, {
-        startDate: leave.startDate,
-        endDate: leave.endDate,
-        reviewNote: req.body?.note || null,
-      });
-    } catch (err) {
-      console.error('[email] notification failed:', err.message);
-    }
-
-    res.json({ message: 'Leave rejected successfully', leave });
-  } catch (err) {
-    console.error('Reject leave error:', err);
-    res.status(500).json({ message: err.message });
-  }
-};
-
-module.exports = { requestLeave, getMyLeaves, getAllLeaves, approveLeave, rejectLeave };

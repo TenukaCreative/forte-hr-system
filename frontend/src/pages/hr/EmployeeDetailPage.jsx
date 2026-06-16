@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { Upload, Trash2, FileText, ArrowLeft } from 'lucide-react';
 import Shell from '../../components/layout/Shell';
+import { useAuth } from '../../context/AuthContext';
 import { C, formatDate } from '../../components/theme';
 import api from '../../api/axios';
 
@@ -53,6 +54,8 @@ export default function EmployeeDetailPage() {
   const { userId } = useParams();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const { resolvedRole } = useAuth();
+  const canManageLeave = resolvedRole === 'HR_MANAGER' || resolvedRole === 'SUPER_ADMIN';
 
   const [userData, setUserData] = useState(null);
   const [employee, setEmployee] = useState(null);
@@ -360,15 +363,6 @@ export default function EmployeeDetailPage() {
               <label className="forte-label">Full Name<span style={{ color: '#C8203D', marginLeft: 2 }}>*</span></label>
               <input className="forte-input" value={form.name} onChange={f('name')} required placeholder="e.g. John Smith" />
             </div>
-            <div className="forte-group">
-              <label className="forte-label">System Role</label>
-              <select className="forte-select" value={form.role} onChange={f('role')}>
-                <option value="">Select role…</option>
-                {ROLES.map((r) => (
-                  <option key={r.value} value={r.value}>{r.label}</option>
-                ))}
-              </select>
-            </div>
             <div className="forte-row">
               <div className="forte-group">
                 <label className="forte-label">Employee Code<span style={{ color: '#C8203D', marginLeft: 2 }}>*</span></label>
@@ -429,7 +423,8 @@ export default function EmployeeDetailPage() {
           </form>
         </div>
 
-        {/* Right — Documents */}
+        {/* Right — Documents + Leave Entitlement */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
         <div className="card">
           <h3 className="section-title">Documents ({documents.length})</h3>
 
@@ -513,7 +508,107 @@ export default function EmployeeDetailPage() {
             </div>
           )}
         </div>
+
+        {canManageLeave && <LeaveEntitlementCard userId={userId} />}
+        </div>
       </div>
     </Shell>
+  );
+}
+
+function LeaveEntitlementCard({ userId }) {
+  const year = new Date().getFullYear();
+  const [ent, setEnt] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [totalDays, setTotalDays] = useState('18');
+  const [saving, setSaving] = useState(false);
+
+  const load = () =>
+    api.get(`/leaves/entitlement/${userId}`)
+      .then((r) => { setEnt(r.data); setTotalDays(String(r.data?.totalDays ?? 18)); })
+      .catch(() => setEnt(null))
+      .finally(() => setLoading(false));
+
+  useEffect(() => { load(); }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api.post('/leaves/entitlement', { employeeId: userId, year, totalDays: parseFloat(totalDays) });
+      toast.success('Entitlement saved');
+      setEditing(false);
+      setLoading(true);
+      await load();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to save entitlement');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const total = parseFloat(ent?.totalDays ?? 0) || 0;
+  const used = parseFloat(ent?.usedDays ?? 0) || 0;
+  const assigned = ent && total > 0;
+
+  const metaLabel = { fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(21,22,26,0.4)', margin: 0 };
+  const metaValue = { fontSize: 22, fontWeight: 600, color: C.dark, margin: '4px 0 0', lineHeight: 1 };
+  const primaryBtn = {
+    background: '#C8203D', color: '#fff', borderRadius: 8, padding: '9px 16px',
+    fontWeight: 600, fontSize: 14, border: 'none', cursor: saving ? 'not-allowed' : 'pointer',
+    fontFamily: 'inherit', opacity: saving ? 0.6 : 1,
+  };
+
+  return (
+    <div className="card">
+      <h3 className="section-title">Leave Entitlement · {year}</h3>
+      {loading ? (
+        <p style={{ fontSize: 13, color: C.muted }}>Loading…</p>
+      ) : (
+        <>
+          <div style={{ display: 'flex', gap: 28, marginBottom: 18 }}>
+            <div>
+              <p style={metaLabel}>Total</p>
+              <p style={{ ...metaValue, fontSize: assigned ? 22 : 15, fontWeight: assigned ? 600 : 500, color: assigned ? C.dark : C.muted }}>
+                {assigned ? total : 'Not assigned yet'}
+              </p>
+            </div>
+            {assigned && (
+              <>
+                <div>
+                  <p style={metaLabel}>Used</p>
+                  <p style={metaValue}>{used}</p>
+                </div>
+                <div>
+                  <p style={metaLabel}>Remaining</p>
+                  <p style={{ ...metaValue, color: total - used > 0 ? C.green : C.red }}>{total - used}</p>
+                </div>
+              </>
+            )}
+          </div>
+
+          {editing ? (
+            <div>
+              <label className="forte-label">Total Days</label>
+              <input
+                className="forte-input"
+                type="number"
+                step="0.5"
+                min="0"
+                value={totalDays}
+                onChange={(e) => setTotalDays(e.target.value)}
+                style={{ marginBottom: 12 }}
+              />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={save} disabled={saving} style={primaryBtn}>{saving ? 'Saving…' : 'Save'}</button>
+                <button onClick={() => setEditing(false)} className="btn-ghost">Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setEditing(true)} style={primaryBtn}>Edit Entitlement</button>
+          )}
+        </>
+      )}
+    </div>
   );
 }

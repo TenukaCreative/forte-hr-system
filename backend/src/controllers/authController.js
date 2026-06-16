@@ -16,7 +16,12 @@ const getGraphProfile = async (accessToken) => {
 };
 
 const issueJwt = (user) => {
-  const payload = { id: user.id, email: user.email, name: user.name, role: user.role };
+  const payload = {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    designation: user.jobTitle || null,
+  };
   return {
     token: jwt.sign(payload, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRES_IN || '7d',
@@ -57,11 +62,11 @@ const microsoftCallback = async (req, res, next) => {
         email,
         name,
         isActive: true,
-        role: null,
+        jobTitle: profile.jobTitle,
       });
       console.log(`New user provisioned from AD: ${email}`);
     } else {
-      await user.update({ email, name });
+      await user.update({ email, name, jobTitle: profile.jobTitle });
     }
 
     if (!user.isActive) {
@@ -117,7 +122,6 @@ const microsoftCallback = async (req, res, next) => {
       if (managerEmail) {
         let managerUser = await User.findOne({ where: { email: managerEmail } });
         if (!managerUser) {
-          // Stub record for the manager — role stays null, HR assigns later.
           managerUser = await User.create({
             name: managerData.displayName,
             email: managerEmail,
@@ -151,7 +155,7 @@ const microsoftCallback = async (req, res, next) => {
 const me = async (req, res, next) => {
   try {
     const dbUser = await User.findByPk(req.user.id, {
-      attributes: ['name', 'role', 'isActive'],
+      attributes: ['name', 'jobTitle', 'isActive'],
     });
     if (!dbUser || !dbUser.isActive) {
       return res.status(403).json({ message: 'Account deactivated. Contact IT.' });
@@ -159,9 +163,10 @@ const me = async (req, res, next) => {
     res.json({
       ...req.user,
       name: dbUser.name ?? req.user.name,
-      role: dbUser.role ?? req.user.role,
+      designation: dbUser.jobTitle ?? req.user.designation,
     });
   } catch (err) {
+    console.error('GET /auth/me failed:', err);
     next(err);
   }
 };
