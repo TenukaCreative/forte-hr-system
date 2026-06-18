@@ -32,9 +32,10 @@ LeaveRequest.belongsTo(User, { foreignKey: 'approverId', as: 'approver' });
 LeaveEntitlement.belongsTo(User, { foreignKey: 'employeeId', as: 'employee' });
 LeaveEntitlement.belongsTo(User, { foreignKey: 'assignedBy', as: 'assignedByUser' });
 
-// Employee <-> LeavePlan
-Employee.hasMany(LeavePlan, { foreignKey: 'employeeId' });
-LeavePlan.belongsTo(Employee, { foreignKey: 'employeeId' });
+// LeavePlan <-> User (employee + reporting manager at time of planning)
+LeavePlan.belongsTo(User, { as: 'employee', foreignKey: 'employeeId' });
+LeavePlan.belongsTo(User, { as: 'manager', foreignKey: 'managerId' });
+User.hasMany(LeavePlan, { as: 'leavePlans', foreignKey: 'employeeId' });
 
 // Employee <-> KPI
 Employee.hasMany(KPI, { foreignKey: 'employeeId' });

@@ -119,10 +119,7 @@ const microsoftCallback = async (req, res, next) => {
         }
       );
 
-      console.log('MANAGER SYNC: Graph manager response:', managerData);
-
       const managerEmail = managerData.mail;
-      console.log('MANAGER SYNC: Looking up manager by email:', managerEmail);
       if (managerEmail) {
         let managerUser = await User.findOne({ where: { email: managerEmail } });
         if (!managerUser) {
@@ -135,13 +132,11 @@ const microsoftCallback = async (req, res, next) => {
           });
           console.log(`Manager stub created from AD: ${managerEmail}`);
         }
-        console.log('MANAGER SYNC: Found manager in DB:', managerUser?.id);
 
         // Capture the existing reporting manager before the update so we can
         // tell whether it actually changed in Azure AD. (`user` still holds
         // the pre-update value — the bulk update below does not refresh it.)
         const previousManagerId = user.managerId;
-        console.log('MANAGER SYNC: Current user.managerId:', previousManagerId);
 
         await User.update(
           { managerId: managerUser.id },
@@ -149,7 +144,6 @@ const microsoftCallback = async (req, res, next) => {
         );
 
         const newManagerId = managerUser ? managerUser.id : null;
-        console.log('MANAGER SYNC: New managerId to set:', newManagerId);
 
         if (newManagerId !== null) {
           await LeaveRequest.update(

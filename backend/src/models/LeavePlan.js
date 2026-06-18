@@ -4,32 +4,52 @@ module.exports = (sequelize) => {
   const LeavePlan = sequelize.define('LeavePlan', {
     id: {
       type: DataTypes.UUID,
-      primaryKey: true,
       defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
     },
     employeeId: {
       type: DataTypes.UUID,
-      references: { model: 'Employees', key: 'id' },
+      allowNull: false,
+      references: { model: 'Users', key: 'id' },
+      onDelete: 'CASCADE',
     },
-    year: {
-      type: DataTypes.INTEGER,
+    // Reporting manager at the time of planning — copied from user.managerId
+    // on creation.
+    managerId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: { model: 'Users', key: 'id' },
+    },
+    leaveType: {
+      type: DataTypes.ENUM(
+        'ANNUAL',
+        'FULL_DAY',
+        'HALF_DAY',
+        'CHANGE',
+        'HOSPITALIZATION',
+        'MATERNITY',
+        'SICK',
+        'SPECIAL'
+      ),
       allowNull: false,
     },
-    month: {
-      type: DataTypes.INTEGER,
+    startDate: {
+      type: DataTypes.DATEONLY,
       allowNull: false,
-      validate: { min: 1, max: 12 },
     },
-    plannedDays: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
+    endDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: false,
     },
-    actualDays: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
+    // Working days only, excluding weekends.
+    daysCount: {
+      type: DataTypes.DECIMAL(4, 1),
+      allowNull: false,
     },
-  }, {
-    timestamps: true,
+    note: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
   });
 
   return LeavePlan;
