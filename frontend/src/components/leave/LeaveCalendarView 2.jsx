@@ -3,23 +3,23 @@ import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { C, card, formatDate } from '../theme';
 import { Badge } from '../ui';
 
-// Leave plans use a single distinct colour, separate from the leave-type colours.
-const PLAN_COLOR = '#7288FA';
-
-// Human-readable status text for the day tooltip.
-const STATUS_TEXT = {
-  PENDING: 'Pending',
-  MANAGER_APPROVED: 'Manager Approved',
-  APPROVED: 'Approved',
+const LEAVE_TYPE_LABELS = {
+  ANNUAL: 'Annual Leave',
+  FULL_DAY: 'Full Day Leave',
+  HALF_DAY: 'Half Day Leave',
+  CHANGE: 'Change Leave',
+  HOSPITALIZATION: 'Hospitalization Leave',
+  MATERNITY: 'Maternity Leave',
+  SICK: 'Sick Leave',
+  SPECIAL: 'Special Leave',
 };
+const leaveTypeLabel = (type) => LEAVE_TYPE_LABELS[type] || type;
 
-// Apply an alpha to a 6-digit hex colour, returning an rgba() string.
-const withAlpha = (hex, alpha) => {
-  const h = hex.replace('#', '');
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+const STATUS_CELL = {
+  PENDING:          { bg: '#FEF3C7', color: '#D97706' },
+  MANAGER_APPROVED: { bg: '#DBEAFE', color: '#2563EB' },
+  APPROVED:         { bg: '#D1FAE5', color: '#065F46' },
+  REJECTED:         { bg: '#FEE2E2', color: '#991B1B' },
 };
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -38,20 +38,17 @@ const getDaysInMonth = (year, month) => {
   return Array.from({ length: last }, (_, i) => new Date(year, month, i + 1));
 };
 
-// Whether a date falls within a request's/plan's range (inclusive).
-const isLeaveOnDate = (item, date) => {
+// Whether a date falls within a request's range (inclusive).
+const isLeaveOnDate = (request, date) => {
   const day = ymd(date);
-  return item.startDate <= day && day <= item.endDate;
+  return request.startDate <= day && day <= request.endDate;
 };
 
-export default function LeaveCalendarView({
-  requests = [],
-  plans = [],
-  getLeaveTypeColor = () => '#7288AE',
-  getLeaveTypeTextColor = () => '#FFFFFF',
-  leaveTypeLabels = {},
-}) {
-  const typeLabel = (type) => leaveTypeLabels[type] || type;
+// First request that covers the given date.
+const getLeaveForDate = (requests, date) =>
+  requests.find((r) => isLeaveOnDate(r, date)) || null;
+
+export default function LeaveCalendarView({ requests = [] }) {
   const [viewDate, setViewDate] = useState(new Date());
   const [openDay, setOpenDay] = useState(null); // YYYY-MM-DD of the open popover
 
@@ -99,40 +96,12 @@ export default function LeaveCalendarView({
           const weekday = (date.getDay() + 6) % 7;
           const isWeekend = weekday >= 5;
           const isToday = dateStr === todayStr;
-          // Rejected requests are ignored on the calendar (not highlighted).
-          const leave = requests.find(
-            (r) => r.status !== 'REJECTED' && isLeaveOnDate(r, date)
-          ) || null;
-          const plan = plans.find((p) => isLeaveOnDate(p, date)) || null;
-
-          // Background + text. A leave request takes priority over a plan.
-          let bg = isWeekend ? '#F9FAFB' : '#fff';
-          let textColor = C.dark;
-          if (leave) {
-            const typeColor = getLeaveTypeColor(leave.leaveType);
-            if (leave.status === 'APPROVED') {
-              bg = typeColor; // solid
-              textColor = getLeaveTypeTextColor(leave.leaveType);
-            } else {
-              // PENDING / MANAGER_APPROVED — faded to distinguish from approved.
-              bg = withAlpha(typeColor, 0.5);
-            }
-          } else if (plan) {
-            bg = withAlpha(PLAN_COLOR, 0.6);
-          }
-          // A day with both a request and a plan shows the request colour plus a dot.
-          const showPlanDot = !!(leave && plan);
-
-          // Day tooltip text.
-          const titleParts = [];
-          if (leave) titleParts.push(`${typeLabel(leave.leaveType)} — ${STATUS_TEXT[leave.status] || leave.status}`);
-          if (plan) titleParts.push('Planned Leave');
-          const title = titleParts.join(' · ');
+          const leave = getLeaveForDate(requests, date);
+          const cellStyle = leave ? STATUS_CELL[leave.status] || STATUS_CELL.PENDING : null;
 
           return (
             <div
               key={dateStr}
-              title={title || undefined}
               onClick={() => leave && setOpenDay(openDay === dateStr ? null : dateStr)}
               style={{
                 position: 'relative',
@@ -143,21 +112,14 @@ export default function LeaveCalendarView({
                 borderRadius: 8,
                 fontSize: 13,
                 cursor: leave ? 'pointer' : 'default',
-                background: bg,
-                color: textColor,
-                fontWeight: isToday ? 700 : (leave || plan ? 600 : 400),
+                background: cellStyle ? cellStyle.bg : (isWeekend ? '#F9FAFB' : '#fff'),
+                color: cellStyle ? cellStyle.color : C.dark,
+                fontWeight: isToday ? 700 : (leave ? 600 : 400),
                 textDecoration: isToday ? 'underline' : 'none',
-                border: isToday ? '1px solid #9CA3AF' : `1px solid ${C.border}`,
+                border: `1px solid ${C.border}`,
               }}
             >
               {date.getDate()}
-
-              {showPlanDot && (
-                <span style={{
-                  position: 'absolute', bottom: 4, left: '50%', transform: 'translateX(-50%)',
-                  width: 5, height: 5, borderRadius: '50%', background: PLAN_COLOR,
-                }} />
-              )}
 
               {leave && openDay === dateStr && (
                 <div
@@ -170,7 +132,7 @@ export default function LeaveCalendarView({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: C.dark }}>{typeLabel(leave.leaveType)}</span>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: C.dark }}>{leaveTypeLabel(leave.leaveType)}</span>
                     <button onClick={() => setOpenDay(null)} title="Close" style={{ ...navBtn, padding: 2, border: 'none', background: 'none' }}>
                       <X size={16} />
                     </button>
@@ -192,13 +154,13 @@ export default function LeaveCalendarView({
       {/* Legend */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 18 }}>
         {[
-          { label: 'Approved Leave', color: getLeaveTypeColor('ANNUAL') },
-          { label: 'Pending Leave', color: withAlpha(getLeaveTypeColor('ANNUAL'), 0.5) },
-          { label: 'Planned Leave', color: PLAN_COLOR },
-          { label: 'Today', color: '#9CA3AF' },
+          { label: 'Pending', key: 'PENDING' },
+          { label: 'Manager Approved', key: 'MANAGER_APPROVED' },
+          { label: 'Approved', key: 'APPROVED' },
+          { label: 'Rejected', key: 'REJECTED' },
         ].map((l) => (
-          <span key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: C.muted }}>
-            <span style={{ width: 10, height: 10, borderRadius: '50%', background: l.color, border: `1px solid ${C.border}` }} />
+          <span key={l.key} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: C.muted }}>
+            <span style={{ width: 12, height: 12, borderRadius: 3, background: STATUS_CELL[l.key].bg, border: `1px solid ${C.border}` }} />
             {l.label}
           </span>
         ))}

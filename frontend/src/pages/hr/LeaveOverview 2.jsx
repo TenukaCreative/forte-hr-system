@@ -15,36 +15,13 @@ const STATUS_STYLES = {
   REJECTED:         { bg: '#FEE2E2', color: '#DC2626', label: 'Rejected' },
 };
 
-// Leave type → pill colours, shared across the leave UI. Light backgrounds
-// (SPECIAL, HOSPITALIZATION) use dark text for contrast; the rest use white.
-const LEAVE_TYPE_COLORS = {
-  ANNUAL:          '#BA5A5A',
-  FULL_DAY:        '#778873',
-  HALF_DAY:        '#428475',
-  CHANGE:          '#EC6530',
-  HOSPITALIZATION: '#9FA1FF',
-  MATERNITY:       '#39B1D1',
-  SICK:            '#ECB65F',
-  SPECIAL:         '#C1EBE9',
-  OTHER:           '#7288AE',
+const TYPE_STYLES = {
+  PAID:   { bg: '#DCFCE7', color: '#16A34A' },
+  UNPAID: { bg: '#FEF3C7', color: '#D97706' },
 };
-const getLeaveTypeColor = (type) => LEAVE_TYPE_COLORS[type] || '#7288AE';
 
-const LIGHT_LEAVE_TYPES = ['SPECIAL', 'HOSPITALIZATION'];
-const getLeaveTypeTextColor = (type) =>
-  LIGHT_LEAVE_TYPES.includes(type) ? '#15161A' : '#FFFFFF';
-
-const LEAVE_TYPE_LABELS = {
-  ANNUAL:          'Annual Leave',
-  FULL_DAY:        'Full Day',
-  HALF_DAY:        'Half Day',
-  CHANGE:          'Change Leave',
-  HOSPITALIZATION: 'Hospitalization',
-  MATERNITY:       'Maternity Leave',
-  SICK:            'Sick Leave',
-  SPECIAL:         'Special Leave',
-  OTHER:           'Other',
-};
+const formatType = (t) =>
+  t ? t.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : '—';
 
 const formatDate = (iso) =>
   iso
@@ -177,6 +154,7 @@ function AllRequestsView() {
             <tbody>
               {leaves.map((l, i) => {
                 const sStyle = STATUS_STYLES[l.status] || STATUS_STYLES.PENDING;
+                const tStyle = TYPE_STYLES[l.leaveType] || TYPE_STYLES.PAID;
                 const name = l.employee?.name;
                 const isLast = i === leaves.length - 1;
                 const cellBase = { padding: '14px 16px', fontSize: 14, color: '#15161A', verticalAlign: 'middle' };
@@ -208,12 +186,11 @@ function AllRequestsView() {
                     {/* Type pill */}
                     <td style={cellBase}>
                       <span style={{
-                        backgroundColor: getLeaveTypeColor(l.leaveType),
-                        color: getLeaveTypeTextColor(l.leaveType),
-                        borderRadius: '9999px', padding: '2px 10px',
-                        fontSize: '12px', fontWeight: '500', display: 'inline-block',
+                        background: tStyle.bg, color: tStyle.color,
+                        borderRadius: 100, padding: '3px 10px',
+                        fontSize: 11, fontWeight: 600,
                       }}>
-                        {LEAVE_TYPE_LABELS[l.leaveType] || 'Other'}
+                        {formatType(l.leaveType)}
                       </span>
                     </td>
 
@@ -321,17 +298,7 @@ function ApprovalsView({ kind }) {
               </div>
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, fontSize: 13, color: '#15161A', marginBottom: 12 }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <strong style={{ color: 'rgba(21,22,26,0.5)', fontWeight: 600 }}>Type:</strong>
-                  <span style={{
-                    backgroundColor: getLeaveTypeColor(r.leaveType),
-                    color: getLeaveTypeTextColor(r.leaveType),
-                    borderRadius: '9999px', padding: '2px 10px',
-                    fontSize: '12px', fontWeight: '500', display: 'inline-block',
-                  }}>
-                    {LEAVE_TYPE_LABELS[r.leaveType] || 'Other'}
-                  </span>
-                </span>
+                <span><strong style={{ color: 'rgba(21,22,26,0.5)', fontWeight: 600 }}>Type:</strong> {formatType(r.leaveType)}</span>
                 <span><strong style={{ color: 'rgba(21,22,26,0.5)', fontWeight: 600 }}>Dates:</strong> {formatDate(r.startDate)} → {formatDate(r.endDate)}</span>
                 <span><strong style={{ color: 'rgba(21,22,26,0.5)', fontWeight: 600 }}>Days:</strong> {r.daysCount}</span>
               </div>
@@ -406,135 +373,6 @@ function TeamLeaveView() {
   );
 }
 
-// ── Tab 5: Team Plans (view-only list of direct reports' leave plans) ─────
-function TeamPlansView() {
-  const [plans, setPlans] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    api.get('/leave-plans/team')
-      .then((r) => setPlans(r.data || []))
-      .catch(() => toast.error('Failed to load team plans'))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return <div className="spinner-full"><div className="spinner" /></div>;
-
-  return (
-    <>
-      <style>{`
-        .lo-row { transition: background 0.15s; }
-        .lo-row:hover td { background: #FAFAF7; }
-      `}</style>
-
-      <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: 0, overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px 16px' }}>
-          <h3 style={{ fontSize: 18, fontWeight: 600, color: '#15161A', margin: 0, letterSpacing: '-0.01em' }}>
-            Team Leave Plans
-          </h3>
-        </div>
-
-        {plans.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 0' }}>
-            <Calendar size={40} style={{ color: 'rgba(21,22,26,0.15)', marginBottom: 12 }} />
-            <p style={{ margin: 0, fontSize: 16, fontWeight: 500, color: 'rgba(21,22,26,0.4)' }}>
-              No team leave plans submitted yet.
-            </p>
-          </div>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: '#FAFAF7', borderBottom: '1px solid #E4E3DC' }}>
-                {['Employee', 'Type', 'From', 'To', 'Days', 'Note'].map((h) => (
-                  <th key={h} style={{
-                    textAlign: h === 'Days' ? 'center' : 'left',
-                    padding: '12px 16px',
-                    fontSize: 11,
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                    color: 'rgba(21,22,26,0.4)',
-                    letterSpacing: '0.06em',
-                  }}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {plans.map((p, i) => {
-                const name = p.employee?.name;
-                const isLast = i === plans.length - 1;
-                const cellBase = { padding: '14px 16px', fontSize: 14, color: '#15161A', verticalAlign: 'middle' };
-                const rowBorder = isLast ? 'none' : '1px solid #E4E3DC';
-
-                return (
-                  <tr key={p.id} className="lo-row" style={{ borderBottom: rowBorder }}>
-                    {/* Employee with avatar + job title */}
-                    <td style={{ ...cellBase, fontWeight: 600 }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center' }}>
-                        <span style={{
-                          width: 28, height: 28, borderRadius: '50%',
-                          background: '#C8203D', color: '#fff',
-                          fontSize: 11, fontWeight: 600,
-                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                          marginRight: 10, flexShrink: 0,
-                        }}>
-                          {initial(name)}
-                        </span>
-                        <span style={{ minWidth: 0 }}>
-                          <span style={{ display: 'block' }}>{name || '—'}</span>
-                          <span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'rgba(21,22,26,0.5)' }}>
-                            {p.employee?.jobTitle || '—'}
-                          </span>
-                        </span>
-                      </span>
-                    </td>
-
-                    {/* Type pill */}
-                    <td style={cellBase}>
-                      <span style={{
-                        backgroundColor: getLeaveTypeColor(p.leaveType),
-                        color: getLeaveTypeTextColor(p.leaveType),
-                        borderRadius: '9999px', padding: '2px 10px',
-                        fontSize: '12px', fontWeight: '500', display: 'inline-block',
-                      }}>
-                        {LEAVE_TYPE_LABELS[p.leaveType] || 'Other'}
-                      </span>
-                    </td>
-
-                    {/* From / To */}
-                    <td style={{ ...cellBase, fontSize: 13 }}>{formatDate(p.startDate)}</td>
-                    <td style={{ ...cellBase, fontSize: 13 }}>{formatDate(p.endDate)}</td>
-
-                    {/* Days */}
-                    <td style={{ ...cellBase, fontWeight: 600, textAlign: 'center' }}>{p.daysCount} days</td>
-
-                    {/* Note */}
-                    <td
-                      style={{
-                        ...cellBase,
-                        maxWidth: 200,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        color: 'rgba(21,22,26,0.5)',
-                        fontSize: 13,
-                      }}
-                      title={p.note || ''}
-                    >
-                      {p.note || '—'}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </>
-  );
-}
-
 export default function LeaveOverview() {
   const { resolvedRole } = useAuth();
   const isSenior = resolvedRole === 'SENIOR' || resolvedRole === 'SUPER_ADMIN';
@@ -545,7 +383,6 @@ export default function LeaveOverview() {
   if (isSenior) tabs.push({ key: 'team', label: 'Team Approvals' });
   if (isHr) tabs.push({ key: 'final', label: 'Final Approvals' });
   if (isHr || isSenior) tabs.push({ key: 'team-leave', label: 'Team Leave' });
-  if (isHr || isSenior) tabs.push({ key: 'team-plans', label: 'Team Plans' });
 
   const [tab, setTab] = useState(null);
   const activeTab = tab || tabs[0]?.key;
@@ -572,7 +409,6 @@ export default function LeaveOverview() {
       {activeTab === 'team' && <ApprovalsView kind="team" />}
       {activeTab === 'final' && <ApprovalsView kind="final" />}
       {activeTab === 'team-leave' && <TeamLeaveView />}
-      {activeTab === 'team-plans' && <TeamPlansView />}
     </Shell>
   );
 }

@@ -10,6 +10,8 @@ const {
   getMyEntitlement,
   submitRequest,
   getMyRequests,
+
+  
   getPendingForManager,
   managerReview,
   getPendingApproval,
@@ -18,6 +20,7 @@ const {
   getTeamApprovedLeaves,
   uploadLeaveDocument,
   getLeaveDocument,
+  deleteLeaveRequest,
 } = require('../controllers/leaveController');
 
 // Entitlements
@@ -38,6 +41,9 @@ router.get('/:id/document', auth, getLeaveDocument);
 
 // Manager Step 1 review — any authenticated user (controller checks managerId)
 router.patch('/:id/manager-review', auth, managerReview);
+
+// Employee cancels their own request — controller verifies ownership
+router.delete('/:id', auth, deleteLeaveRequest);
 
 // HR / Super Admin Step 2
 router.get('/pending-approval', auth, authorize('HR_MANAGER', 'SUPER_ADMIN'), getPendingApproval);

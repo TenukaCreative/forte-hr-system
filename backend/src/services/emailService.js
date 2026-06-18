@@ -103,6 +103,34 @@ const sendLeaveRejectedEmail = (employee, leaveData = {}) =>
     ),
   });
 
+const sendLeavePlanNotification = async ({
+  managerEmail,
+  employeeName,
+  leaveType,
+  startDate,
+  endDate,
+  daysCount,
+  note,
+  senderAccessToken, // eslint-disable-line no-unused-vars
+}) =>
+  // Follows the same pattern as the other leave emails: build subject + body
+  // and delegate to sendEmail. (sendEmail uses the hardcoded test sender /
+  // recipient, so managerEmail and senderAccessToken are accepted for API
+  // parity with the caller but not used for routing — same as every other
+  // trigger in this file.)
+  sendEmail({
+    subject: 'New Leave Plan Submitted',
+    bodyHtml: wrap(
+      'New Leave Plan Submitted',
+      `<p>${employeeName || 'An employee'} has submitted a leave plan.</p>
+        <p>Type: ${leaveType || '—'}<br/>
+        From: ${startDate || '—'} to ${endDate || '—'} (${daysCount ?? 0} working days)</p>
+        ${note ? `<p>Note: ${note}</p>` : ''}
+        <p>This is a leave plan only and does not require your approval.</p>`,
+      '#7288FA'
+    ),
+  });
+
 const sendKpiAssignedEmail = (employee, kpiData = {}) =>
   sendEmail({
     subject: `New KPI Assigned — ${kpiData.title || 'KPI'}`,
@@ -158,6 +186,7 @@ module.exports = {
   sendLeaveSubmittedEmail,
   sendLeaveApprovedEmail,
   sendLeaveRejectedEmail,
+  sendLeavePlanNotification,
   sendKpiAssignedEmail,
   sendPerformanceReviewEmail,
   sendEthicsReviewEmail,

@@ -1,6 +1,20 @@
 const { Op } = require('sequelize');
 const { LeaveRequest, LeaveEntitlement, User } = require('../models');
 const resolveRole = require('../utils/resolveRole');
+const { sendEmail } = require('../services/emailService');
+
+// Count working days between two dates inclusive, excluding Saturdays/Sundays.
+const countWorkingDays = (start, end) => {
+  let count = 0;
+  const current = new Date(start);
+  const endDate = new Date(end);
+  while (current <= endDate) {
+    const day = current.getDay();
+    if (day !== 0 && day !== 6) count++;
+    current.setDate(current.getDate() + 1);
+  }
+  return count;
+};
 
 // ── ENTITLEMENTS ──────────────────────────────────────────────
 
@@ -76,14 +90,36 @@ const submitRequest = async (req, res, next) => {
       });
     }
 
-    // Calculate days
+    // Validate the range falls on working days (exclude weekends).
+    const workingDays = countWorkingDays(startDate, endDate);
+    if (workingDays === 0) {
+      return res.status(400).json({ error: 'Leave dates must fall on working days' });
+    }
+
+    // Reject if the employee already has a non-rejected request covering any of
+    // the same dates.
+    const overlapping = await LeaveRequest.findOne({
+      where: {
+        employeeId: req.user.id,
+        status: { [Op.notIn]: ['REJECTED'] },
+        startDate: { [Op.lte]: endDate },
+        endDate: { [Op.gte]: startDate },
+      },
+    });
+
+    if (overlapping) {
+      return res.status(400).json({
+        error: `You already have a ${overlapping.status.toLowerCase().replace('_', ' ')} leave request from ${overlapping.startDate} to ${overlapping.endDate} that overlaps with these dates. Please cancel it first before submitting a new request.`,
+      });
+    }
+
+    // Calculate days — a half day is always 0.5; otherwise use the working
+    // day count (weekends excluded), not the raw calendar day difference.
     let daysCount;
     if (leaveType === 'HALF_DAY') {
       daysCount = 0.5;
     } else {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      daysCount = Math.round(((end - start) / (1000 * 60 * 60 * 24) + 1) * 2) / 2;
+      daysCount = workingDays;
     }
 
     // Check balance
@@ -331,6 +367,81 @@ const getLeaveDocument = async (req, res, next) => {
   }
 };
 
+// DELETE /api/leaves/:id
+// Employee cancels (deletes) their own leave request before it starts
+const deleteLeaveRequest = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Find the leave request and verify ownership
+    const leaveRequest = await LeaveRequest.findOne({
+      where: { id, employeeId: req.user.id },
+      include: [
+        {
+          model: User,
+          as: 'employee',
+          attributes: ['id', 'name', 'email'],
+        },
+        {
+          model: User,
+          as: 'manager',
+          attributes: ['id', 'name', 'email'],
+        },
+      ],
+    });
+
+    if (!leaveRequest) {
+      return res.status(404).json({ error: 'Leave request not found' });
+    }
+
+    // Cannot delete if already fully approved
+    if (leaveRequest.status === 'APPROVED') {
+      return res.status(400).json({
+        error: 'Cannot delete an approved leave request. Contact HR.',
+      });
+    }
+
+    // Cannot delete if start date has passed or is today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(leaveRequest.startDate);
+    if (startDate <= today) {
+      return res.status(400).json({
+        error: 'Cannot delete a leave request that has already started or passed.',
+      });
+    }
+
+    // Store details before deletion for notification
+    const employeeName = leaveRequest.employee.name;
+    const managerEmail = leaveRequest.manager?.email;
+    const leaveType = leaveRequest.leaveType;
+    const start = leaveRequest.startDate;
+    const end = leaveRequest.endDate;
+
+    // Delete the record
+    await leaveRequest.destroy();
+
+    // Send notification email to manager if manager exists. Follows the same
+    // emailService / MS Graph sendMail pattern used elsewhere in the project.
+    if (managerEmail) {
+      try {
+        await sendEmail({
+          subject: 'Leave Request Cancelled',
+          bodyHtml: `<p>${employeeName} has cancelled their ${leaveType} leave request from ${start} to ${end}.</p>`,
+        });
+      } catch (emailErr) {
+        console.error('Delete leave notification failed:', emailErr);
+        // Non-blocking — do not fail the request
+      }
+    }
+
+    return res.json({ message: 'Leave request deleted successfully' });
+  } catch (err) {
+    console.error('DELETE LEAVE REQUEST ERROR:', err);
+    next(err);
+  }
+};
+
 module.exports = {
   assignEntitlement,
   getEntitlement,
@@ -345,4 +456,5 @@ module.exports = {
   getTeamApprovedLeaves,
   uploadLeaveDocument,
   getLeaveDocument,
+  deleteLeaveRequest,
 };

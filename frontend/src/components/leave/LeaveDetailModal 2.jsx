@@ -1,40 +1,19 @@
 import { useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { X, Trash2 } from 'lucide-react';
+import { X } from 'lucide-react';
 import api from '../../api/axios';
-import { useAuth } from '../../context/AuthContext';
 import { C, card, formatDate } from '../theme';
 import { Badge, Button } from '../ui';
 
-// Leave type → pill colours, shared across the leave UI. Light backgrounds
-// (SPECIAL, HOSPITALIZATION) use dark text for contrast; the rest use white.
-const LEAVE_TYPE_COLORS = {
-  ANNUAL:          '#BA5A5A',
-  FULL_DAY:        '#778873',
-  HALF_DAY:        '#428475',
-  CHANGE:          '#EC6530',
-  HOSPITALIZATION: '#9FA1FF',
-  MATERNITY:       '#39B1D1',
-  SICK:            '#ECB65F',
-  SPECIAL:         '#C1EBE9',
-  OTHER:           '#7288AE',
-};
-const getLeaveTypeColor = (type) => LEAVE_TYPE_COLORS[type] || '#7288AE';
-
-const LIGHT_LEAVE_TYPES = ['SPECIAL', 'HOSPITALIZATION'];
-const getLeaveTypeTextColor = (type) =>
-  LIGHT_LEAVE_TYPES.includes(type) ? '#15161A' : '#FFFFFF';
-
 const LEAVE_TYPE_LABELS = {
-  ANNUAL:          'Annual Leave',
-  FULL_DAY:        'Full Day',
-  HALF_DAY:        'Half Day',
-  CHANGE:          'Change Leave',
-  HOSPITALIZATION: 'Hospitalization',
-  MATERNITY:       'Maternity Leave',
-  SICK:            'Sick Leave',
-  SPECIAL:         'Special Leave',
-  OTHER:           'Other',
+  ANNUAL: 'Annual Leave',
+  FULL_DAY: 'Full Day Leave',
+  HALF_DAY: 'Half Day Leave',
+  CHANGE: 'Change Leave',
+  HOSPITALIZATION: 'Hospitalization Leave',
+  MATERNITY: 'Maternity Leave',
+  SICK: 'Sick Leave',
+  SPECIAL: 'Special Leave',
 };
 const typeLabel = (v) => LEAVE_TYPE_LABELS[v] || v;
 
@@ -53,40 +32,14 @@ function Detail({ label, value }) {
 }
 
 export default function LeaveDetailModal({ request, onClose, onAction, mode = 'manager', readOnly = false }) {
-  const { user } = useAuth();
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
 
   if (!request) return null;
-
-  // The employee may cancel their own request while it is still pending and
-  // its start date is in the future.
-  const todayMid = new Date();
-  todayMid.setHours(0, 0, 0, 0);
-  const canDelete =
-    user?.id === request.employeeId &&
-    request.status !== 'APPROVED' &&
-    request.status !== 'REJECTED' &&
-    new Date(`${request.startDate}T00:00:00`) > todayMid;
 
   const reviewPath = mode === 'final'
     ? `/leaves/${request.id}/final-review`
     : `/leaves/${request.id}/manager-review`;
-
-  const del = async () => {
-    setBusy(true);
-    try {
-      await api.delete(`/leaves/${request.id}`);
-      toast.success('Leave request cancelled');
-      onAction?.();
-      onClose?.();
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to cancel request');
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const act = async (status) => {
     setBusy(true);
@@ -153,18 +106,7 @@ export default function LeaveDetailModal({ request, onClose, onAction, mode = 'm
           <div style={{ minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: 16, fontWeight: 600, color: C.dark }}>{request.employee?.name || 'Employee'}</p>
             <p style={{ margin: '2px 0 0', fontSize: 13, color: C.muted }}>{request.employee?.jobTitle || '—'}</p>
-            <span style={{
-              marginTop: 8,
-              backgroundColor: getLeaveTypeColor(request.leaveType),
-              color: getLeaveTypeTextColor(request.leaveType),
-              borderRadius: '9999px',
-              padding: '2px 10px',
-              fontSize: '12px',
-              fontWeight: '500',
-              display: 'inline-block',
-            }}>
-              {typeLabel(request.leaveType)}
-            </span>
+            <p style={{ margin: '8px 0 0', fontSize: 13, color: C.dark, fontWeight: 500 }}>{typeLabel(request.leaveType)}</p>
           </div>
           <Badge status={request.status} />
         </div>
@@ -226,38 +168,6 @@ export default function LeaveDetailModal({ request, onClose, onAction, mode = 'm
                 {busy ? 'Working…' : 'Approve'}
               </Button>
             </div>
-          </div>
-        )}
-
-        {/* Cancel / delete — only for the employee viewing their own pending request */}
-        {canDelete && (
-          <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16, marginTop: !readOnly ? 16 : 0 }}>
-            {confirmDelete ? (
-              <>
-                <p style={{ margin: '0 0 10px', fontSize: 13, color: C.dark }}>
-                  Are you sure you want to cancel this leave request? This cannot be undone.
-                </p>
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                  <Button variant="danger" disabled={busy} onClick={del} style={{ padding: '6px 12px', fontSize: 12 }}>
-                    {busy ? 'Cancelling…' : 'Yes, Cancel Request'}
-                  </Button>
-                  <Button variant="ghost" disabled={busy} onClick={() => setConfirmDelete(false)} style={{ padding: '6px 12px', fontSize: 12 }}>
-                    Keep It
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={() => setConfirmDelete(true)}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = C.accent; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = C.muted; }}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'transparent', border: 'none', color: C.muted, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', padding: '2px 4px', transition: 'color 0.15s' }}
-                >
-                  <Trash2 size={14} /> Cancel Request
-                </button>
-              </div>
-            )}
           </div>
         )}
       </div>

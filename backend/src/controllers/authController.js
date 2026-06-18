@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
-const { User, Employee } = require('../models');
+const { Op } = require('sequelize');
+const { User, Employee, LeaveRequest } = require('../models');
 
 const getGraphProfile = async (accessToken) => {
   const { data } = await axios.get(
@@ -132,10 +133,30 @@ const microsoftCallback = async (req, res, next) => {
           console.log(`Manager stub created from AD: ${managerEmail}`);
         }
 
+        // Capture the existing reporting manager before the update so we can
+        // tell whether it actually changed in Azure AD. (`user` still holds
+        // the pre-update value — the bulk update below does not refresh it.)
+        const previousManagerId = user.managerId;
+
         await User.update(
           { managerId: managerUser.id },
           { where: { email } }
         );
+
+        const newManagerId = managerUser ? managerUser.id : null;
+
+        if (newManagerId !== null) {
+          await LeaveRequest.update(
+            { managerId: newManagerId },
+            {
+              where: {
+                employeeId: user.id,
+                managerStatus: 'PENDING',
+                managerId: { [Op.ne]: newManagerId },
+              },
+            }
+          );
+        }
       }
     } catch (err) {
       // 404 = no manager assigned in AD; swallow it and continue (managerId
