@@ -22,6 +22,15 @@ const LEAVE_TYPES = [
 const typeLabel = (v) => LEAVE_TYPES.find((t) => t.value === v)?.label || v;
 const num = (v) => parseFloat(v ?? 0) || 0;
 
+// Saturday (getDay() === 6) and Sunday (getDay() === 0) are non-working days
+// and may not be picked for leave. Parse at local midnight so the weekday is
+// not shifted by the timezone offset of a yyyy-mm-dd string.
+const isWeekend = (dateStr) => {
+  if (!dateStr) return false;
+  const day = new Date(`${dateStr}T00:00:00`).getDay();
+  return day === 0 || day === 6;
+};
+
 export default function LeavePage() {
   const { user } = useAuth();
   const [tab, setTab] = useState('overview');
@@ -170,16 +179,34 @@ function RequestTab({ onSubmitted }) {
 
   const isHalf = leaveType === 'HALF_DAY';
 
+  // Day count excludes weekends — a Mon→Fri range counts as 5 days, not 7.
   const days = (() => {
     if (isHalf) return 0.5;
     if (!startDate || !endDate) return 0;
-    const s = new Date(startDate);
-    const e = new Date(endDate);
+    const s = new Date(`${startDate}T00:00:00`);
+    const e = new Date(`${endDate}T00:00:00`);
     if (e < s) return 0;
-    return Math.round(((e - s) / (1000 * 60 * 60 * 24) + 1) * 2) / 2;
+    let count = 0;
+    const current = new Date(s);
+    while (current <= e) {
+      const day = current.getDay();
+      if (day !== 0 && day !== 6) count++;
+      current.setDate(current.getDate() + 1);
+    }
+    return count;
   })();
 
-  const setSingleDate = (v) => { setStartDate(v); setEndDate(v); };
+  // Block weekends from being selected at all in the native date inputs.
+  const guardWeekend = (v) => {
+    if (isWeekend(v)) {
+      toast.error('Weekends cannot be selected for leave');
+      return false;
+    }
+    return true;
+  };
+  const setSingleDate = (v) => { if (!guardWeekend(v)) return; setStartDate(v); setEndDate(v); };
+  const handleStartDate = (v) => { if (!guardWeekend(v)) return; setStartDate(v); };
+  const handleEndDate = (v) => { if (!guardWeekend(v)) return; setEndDate(v); };
 
   const pickFile = (f) => {
     if (!f) return;
@@ -233,11 +260,11 @@ function RequestTab({ onSubmitted }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
             <div>
               <label style={fieldLabel}>Start Date</label>
-              <input type="date" style={inputStyle} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              <input type="date" style={inputStyle} value={startDate} onChange={(e) => handleStartDate(e.target.value)} />
             </div>
             <div>
               <label style={fieldLabel}>End Date</label>
-              <input type="date" style={inputStyle} value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              <input type="date" style={inputStyle} value={endDate} onChange={(e) => handleEndDate(e.target.value)} />
             </div>
           </div>
         )}

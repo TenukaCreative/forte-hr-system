@@ -2,6 +2,19 @@ const { Op } = require('sequelize');
 const { LeaveRequest, LeaveEntitlement, User } = require('../models');
 const resolveRole = require('../utils/resolveRole');
 
+// Count working days between two dates inclusive, excluding Saturdays/Sundays.
+const countWorkingDays = (start, end) => {
+  let count = 0;
+  const current = new Date(start);
+  const endDate = new Date(end);
+  while (current <= endDate) {
+    const day = current.getDay();
+    if (day !== 0 && day !== 6) count++;
+    current.setDate(current.getDate() + 1);
+  }
+  return count;
+};
+
 // ── ENTITLEMENTS ──────────────────────────────────────────────
 
 // POST /api/leaves/entitlement
@@ -76,14 +89,19 @@ const submitRequest = async (req, res, next) => {
       });
     }
 
-    // Calculate days
+    // Validate the range falls on working days (exclude weekends).
+    const workingDays = countWorkingDays(startDate, endDate);
+    if (workingDays === 0) {
+      return res.status(400).json({ error: 'Leave dates must fall on working days' });
+    }
+
+    // Calculate days — a half day is always 0.5; otherwise use the working
+    // day count (weekends excluded), not the raw calendar day difference.
     let daysCount;
     if (leaveType === 'HALF_DAY') {
       daysCount = 0.5;
     } else {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      daysCount = Math.round(((end - start) / (1000 * 60 * 60 * 24) + 1) * 2) / 2;
+      daysCount = workingDays;
     }
 
     // Check balance
