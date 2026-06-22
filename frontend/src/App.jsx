@@ -1,7 +1,9 @@
+import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import PlaceholderPage from './components/PlaceholderPage';
+import { Spinner } from './components/ui';
 
 import LoginPage from './pages/LoginPage';
 
@@ -28,11 +30,113 @@ import CompanyCalendar from './pages/calendar/CompanyCalendar';
 // Settings
 import SettingsPage from './pages/settings/SettingsPage';
 
+// Role Management
+import RoleManagementPage from './pages/RoleManagementPage';
+
+// Profile setup / completion
+import ProfileCompletePage from './pages/ProfileCompletePage';
+
 function RoleRoute({ roles, children }) {
   const { resolvedRole } = useAuth();
   if (!roles.includes(resolvedRole)) return <Navigate to="/dashboard" replace />;
   return children;
 }
+
+function NoAccess() {
+  return (
+    <div style={{
+      minHeight: '60vh', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: 24,
+    }}>
+      <h1 style={{ fontSize: 22, fontWeight: 700, color: '#15161A', margin: '0 0 8px' }}>
+        No access
+      </h1>
+      <p style={{ fontSize: 14, color: 'rgba(21,22,26,0.5)', margin: 0, maxWidth: 360 }}>
+        You don’t have permission to view this page. Contact your administrator if you
+        think this is a mistake.
+      </p>
+    </div>
+  );
+}
+
+const ALWAYS_ALLOWED = [
+  'dashboard',
+  'leave_management',
+  'performance_evaluation',
+  'company_calendar',
+];
+
+const PermissionRoute = ({ permission, children }) => {
+  const { user, hasPermission } = useAuth();
+  const [checking, setChecking] = useState(false);
+  const [profileComplete, setProfileComplete] = useState(null);
+
+  const designation = (user?.designation || '').toLowerCase().trim().replace(/\s+/g, ' ');
+
+  const isSuperUser =
+    designation.includes('super admin') ||
+    designation.includes('superadmin') ||
+    designation.includes('hr manager') ||
+    designation.includes('hr administrator') ||
+    designation === 'administrator';
+
+  const isAlwaysAllowed = ALWAYS_ALLOWED.includes(permission);
+
+  useEffect(() => {
+    // Super users and always-allowed pages never need the profile check.
+    if (isSuperUser || isAlwaysAllowed || !user) {
+      return;
+    }
+
+    setChecking(true);
+    const token = localStorage.getItem('forte_token');
+    fetch(
+      `${import.meta.env.VITE_API_URL}/employees/profile-status`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+      .then((r) => r.json())
+      .then((data) => {
+        setProfileComplete(data.isComplete);
+        setChecking(false);
+      })
+      .catch(() => {
+        setProfileComplete(false);
+        setChecking(false);
+      });
+  }, [user, permission]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (isSuperUser) return children;
+
+  if (isAlwaysAllowed) {
+    return children;
+  }
+
+  // Show the spinner until the profile-status check has resolved. The
+  // `profileComplete === null` guard matters because on the very first render
+  // (before the effect's fetch runs) `checking` is still false — without it we
+  // would fall through and redirect to /profile-setup prematurely.
+  if (checking || profileComplete === null) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (!profileComplete) {
+    return <Navigate to="/profile-setup" replace />;
+  }
+
+  if (!hasPermission(permission)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+};
 
 function PerformanceRouter() {
   const { resolvedRole } = useAuth();
@@ -65,17 +169,23 @@ export default function App() {
         element={<Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />}
       />
 
+      {/* Profile setup — reachable by any logged-in user; intentionally NOT
+          wrapped by ProfileGate so it can never trap the user in a loop. */}
+      <Route path="/profile-setup" element={<ProtectedRoute><ProfileCompletePage /></ProtectedRoute>} />
+
       {/* Authenticated — all roles */}
-      <Route path="/dashboard" element={<ProtectedRoute><DashboardRouter /></ProtectedRoute>} />
-      <Route path="/leave"     element={<ProtectedRoute><LeavePage /></ProtectedRoute>} />
-      <Route path="/calendar"  element={<ProtectedRoute><CompanyCalendar /></ProtectedRoute>} />
+      <Route path="/dashboard" element={<ProtectedRoute><PermissionRoute permission="dashboard"><DashboardRouter /></PermissionRoute></ProtectedRoute>} />
+      <Route path="/leave"     element={<ProtectedRoute><PermissionRoute permission="leave_management"><LeavePage /></PermissionRoute></ProtectedRoute>} />
+      <Route path="/calendar"  element={<ProtectedRoute><PermissionRoute permission="company_calendar"><CompanyCalendar /></PermissionRoute></ProtectedRoute>} />
 
       {/* Performance — PMO head gets the team view, everyone else their own */}
       <Route
         path="/performance"
         element={
           <ProtectedRoute>
-            <PerformanceRouter />
+            <PermissionRoute permission="performance_evaluation">
+              <PerformanceRouter />
+            </PermissionRoute>
           </ProtectedRoute>
         }
       />
@@ -85,9 +195,9 @@ export default function App() {
         path="/employees"
         element={
           <ProtectedRoute>
-            <RoleRoute roles={['HR_MANAGER', 'SENIOR', 'SUPER_ADMIN']}>
+            <PermissionRoute permission="employee_management">
               <EmployeeManagement />
-            </RoleRoute>
+            </PermissionRoute>
           </ProtectedRoute>
         }
       />
@@ -95,9 +205,9 @@ export default function App() {
         path="/employees/:userId"
         element={
           <ProtectedRoute>
-            <RoleRoute roles={['HR_MANAGER', 'SENIOR', 'SUPER_ADMIN']}>
+            <PermissionRoute permission="employee_management">
               <EmployeeDetailPage />
-            </RoleRoute>
+            </PermissionRoute>
           </ProtectedRoute>
         }
       />
@@ -105,9 +215,9 @@ export default function App() {
         path="/leave-overview"
         element={
           <ProtectedRoute>
-            <RoleRoute roles={['HR_MANAGER', 'SENIOR', 'SUPER_ADMIN']}>
+            <PermissionRoute permission="leave_overview">
               <LeaveOverview />
-            </RoleRoute>
+            </PermissionRoute>
           </ProtectedRoute>
         }
       />
@@ -117,9 +227,9 @@ export default function App() {
         path="/team"
         element={
           <ProtectedRoute>
-            <RoleRoute roles={['SENIOR', 'SUPER_ADMIN']}>
+            <PermissionRoute permission="team_performance">
               <TeamPage />
-            </RoleRoute>
+            </PermissionRoute>
           </ProtectedRoute>
         }
       />
@@ -140,6 +250,18 @@ export default function App() {
             <RoleRoute roles={['SENIOR', 'SUPER_ADMIN']}>
               <SettingsPage />
             </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Role Management — gated by the role_management permission */}
+      <Route
+        path="/role-management"
+        element={
+          <ProtectedRoute>
+            <PermissionRoute permission="role_management">
+              <RoleManagementPage />
+            </PermissionRoute>
           </ProtectedRoute>
         }
       />

@@ -66,6 +66,14 @@ module.exports = (sequelize) => {
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    assignedRoleId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'Roles',
+        key: 'id',
+      },
+    },
   }, {
     timestamps: true,
   });

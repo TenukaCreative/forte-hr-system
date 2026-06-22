@@ -122,11 +122,25 @@ const submitRequest = async (req, res, next) => {
       daysCount = workingDays;
     }
 
-    // Check balance
-    const remaining = entitlement.totalDays - entitlement.usedDays;
-    if (daysCount > remaining) {
+    // Sum days from all non-rejected active requests for this employee this year
+    const pendingDays = await LeaveRequest.sum('daysCount', {
+      where: {
+        employeeId: req.user.id,
+        status: { [Op.in]: ['PENDING', 'MANAGER_APPROVED'] },
+        startDate: {
+          [Op.between]: [
+            new Date(new Date().getFullYear(), 0, 1),
+            new Date(new Date().getFullYear(), 11, 31)
+          ]
+        }
+      }
+    }) || 0;
+
+    const effectiveUsed = entitlement.usedDays + pendingDays;
+
+    if (effectiveUsed + workingDays > entitlement.totalDays) {
       return res.status(400).json({
-        message: `Insufficient leave balance. You have ${remaining} days remaining.`,
+        error: `Insufficient leave balance. You have ${entitlement.totalDays - effectiveUsed} days available (including pending requests).`
       });
     }
 

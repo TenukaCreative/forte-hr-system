@@ -510,6 +510,7 @@ export default function EmployeeDetailPage() {
         </div>
 
         {canManageLeave && <LeaveEntitlementCard userId={userId} />}
+        {canManageLeave && <AssignRoleCard userId={userId} currentRoleId={userData?.assignedRoleId} />}
         </div>
       </div>
     </Shell>
@@ -607,6 +608,77 @@ function LeaveEntitlementCard({ userId }) {
           ) : (
             <button onClick={() => setEditing(true)} style={primaryBtn}>Edit Entitlement</button>
           )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function AssignRoleCard({ userId, currentRoleId }) {
+  const [roles, setRoles] = useState(null); // null = loading
+  const [loadError, setLoadError] = useState(false);
+  const [selectedRoleId, setSelectedRoleId] = useState(currentRoleId || '');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api.get('/roles')
+      .then((r) => setRoles(r.data || []))
+      .catch(() => { setLoadError(true); setRoles([]); });
+  }, []);
+
+  // Keep the dropdown in sync if the parent's assigned role loads/changes.
+  useEffect(() => { setSelectedRoleId(currentRoleId || ''); }, [currentRoleId]);
+
+  const currentRole = (roles || []).find((r) => r.id === currentRoleId);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api.patch(`/roles/assign/${userId}`, { roleId: selectedRoleId || null });
+      toast.success('Role assigned');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to assign role');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const primaryBtn = {
+    background: '#C8203D', color: '#fff', borderRadius: 8, padding: '9px 16px',
+    fontWeight: 600, fontSize: 14, border: 'none', cursor: saving ? 'not-allowed' : 'pointer',
+    fontFamily: 'inherit', opacity: saving ? 0.6 : 1, marginTop: 12,
+  };
+
+  return (
+    <div className="card">
+      <h3 className="section-title">Assign Role</h3>
+      {roles === null ? (
+        <p style={{ fontSize: 13, color: C.muted }}>Loading…</p>
+      ) : loadError ? (
+        <p style={{ fontSize: 13, color: C.red }}>Failed to load roles.</p>
+      ) : (
+        <>
+          <p style={{ fontSize: 13, color: C.muted, margin: '0 0 12px' }}>
+            Currently assigned:{' '}
+            <strong style={{ color: C.dark }}>{currentRole ? currentRole.name : 'None'}</strong>
+          </p>
+          <label className="forte-label">Role</label>
+          <select
+            className="forte-select"
+            value={selectedRoleId}
+            onChange={(e) => setSelectedRoleId(e.target.value)}
+          >
+            <option value="">No role</option>
+            {roles.map((r) => (
+              <option key={r.id} value={r.id}>{r.name}</option>
+            ))}
+          </select>
+          <button onClick={save} disabled={saving} style={primaryBtn}>
+            {saving ? 'Saving…' : 'Save Role'}
+          </button>
+          <p style={{ fontSize: 12, color: C.muted, margin: '12px 0 0' }}>
+            User must log out and back in for role changes to take effect.
+          </p>
         </>
       )}
     </div>

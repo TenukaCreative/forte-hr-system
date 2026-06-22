@@ -120,4 +120,50 @@ const updateEmployee = async (req, res, next) => {
   }
 };
 
-module.exports = { getEmployees, getAllUsers, getEmployee, createEmployee, updateEmployee };
+// PATCH /api/employees/profile
+// Any logged-in user updates their own contact number and join date only.
+const updateMyProfile = async (req, res) => {
+  try {
+    const { contactNumber, joinDate } = req.body;
+    const userId = req.user.id;
+
+    const employee = await Employee.findOne({ where: { userId } });
+
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee record not found' });
+    }
+
+    await employee.update({
+      contactNumber: contactNumber || employee.contactNumber,
+      joinDate: joinDate || employee.joinDate,
+    });
+
+    res.json({ message: 'Profile updated successfully' });
+  } catch (err) {
+    console.error('updateMyProfile error:', err);
+    res.status(500).json({ message: 'Failed to update profile' });
+  }
+};
+
+// GET /api/employees/profile-status
+// Any logged-in user reads their own profile-completion state.
+const getProfileStatus = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const user = await User.findByPk(userId, { attributes: ['assignedRoleId'] });
+    const employee = await Employee.findOne({ where: { userId } });
+
+    const assignedRoleId = user?.assignedRoleId || null;
+    const contactNumber = employee?.contactNumber || null;
+    const joinDate = employee?.joinDate || null;
+    const isComplete = !!assignedRoleId && !!contactNumber && !!joinDate;
+
+    res.json({ assignedRoleId, contactNumber, joinDate, isComplete });
+  } catch (err) {
+    console.error('getProfileStatus error:', err);
+    res.status(500).json({ message: 'Failed to fetch profile status' });
+  }
+};
+
+module.exports = { getEmployees, getAllUsers, getEmployee, createEmployee, updateEmployee, updateMyProfile, getProfileStatus };

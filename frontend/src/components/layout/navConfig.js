@@ -7,6 +7,7 @@ import {
   Users2,
   ClipboardList,
   CheckSquare,
+  ShieldCheck,
 } from 'lucide-react';
 
 export const NAV = {
@@ -14,17 +15,18 @@ export const NAV = {
     {
       section: 'PERSONAL',
       items: [
-        { icon: LayoutDashboard, label: 'Dashboard',        path: '/dashboard' },
-        { icon: BarChart2,       label: 'My Performance',   path: '/performance' },
-        { icon: CalendarDays,    label: 'My Leave',         path: '/leave' },
-        { icon: Calendar,        label: 'Company Calendar', path: '/calendar' },
+        { icon: LayoutDashboard, label: 'Dashboard',        path: '/dashboard', permission: 'dashboard' },
+        { icon: BarChart2,       label: 'My Performance',   path: '/performance', permission: 'performance_evaluation' },
+        { icon: CalendarDays,    label: 'My Leave',         path: '/leave', permission: 'leave_management' },
+        { icon: Calendar,        label: 'Company Calendar', path: '/calendar', permission: 'company_calendar' },
       ],
     },
     {
       section: 'HR ADMIN',
       items: [
-        { icon: Users2,       label: 'Employee Management', path: '/employees' },
-        { icon: ClipboardList, label: 'Leave Overview',     path: '/leave-overview' },
+        { icon: Users2,       label: 'Employee Management', path: '/employees', permission: 'employee_management' },
+        { icon: ClipboardList, label: 'Leave Overview',     path: '/leave-overview', permission: 'leave_overview' },
+        { icon: ShieldCheck,  label: 'Role Management',     path: '/role-management', permission: 'role_management' },
       ],
     },
   ],
@@ -32,17 +34,17 @@ export const NAV = {
     {
       section: 'PERSONAL',
       items: [
-        { icon: LayoutDashboard, label: 'Dashboard',        path: '/dashboard' },
-        { icon: BarChart2,       label: 'My Performance',   path: '/performance' },
-        { icon: CalendarDays,    label: 'My Leave',         path: '/leave' },
-        { icon: Calendar,        label: 'Company Calendar', path: '/calendar' },
+        { icon: LayoutDashboard, label: 'Dashboard',        path: '/dashboard', permission: 'dashboard' },
+        { icon: BarChart2,       label: 'My Performance',   path: '/performance', permission: 'performance_evaluation' },
+        { icon: CalendarDays,    label: 'My Leave',         path: '/leave', permission: 'leave_management' },
+        { icon: Calendar,        label: 'Company Calendar', path: '/calendar', permission: 'company_calendar' },
       ],
     },
     {
       section: 'PMO',
       items: [
-        { icon: Users2,       label: 'Team Performance', path: '/team' },
-        { icon: CheckSquare,  label: 'Leave Approvals',  path: '/leave-approvals' },
+        { icon: Users2,       label: 'Team Performance', path: '/team', permission: 'team_performance' },
+        { icon: CheckSquare,  label: 'Leave Approvals',  path: '/leave-approvals', permission: 'leave_overview' },
       ],
     },
   ],
@@ -50,10 +52,10 @@ export const NAV = {
     {
       section: 'PERSONAL',
       items: [
-        { icon: LayoutDashboard, label: 'Dashboard',        path: '/dashboard' },
-        { icon: BarChart2,       label: 'My Performance',   path: '/performance' },
-        { icon: CalendarDays,    label: 'My Leave',         path: '/leave' },
-        { icon: Calendar,        label: 'Company Calendar', path: '/calendar' },
+        { icon: LayoutDashboard, label: 'Dashboard',        path: '/dashboard', permission: 'dashboard' },
+        { icon: BarChart2,       label: 'My Performance',   path: '/performance', permission: 'performance_evaluation' },
+        { icon: CalendarDays,    label: 'My Leave',         path: '/leave', permission: 'leave_management' },
+        { icon: Calendar,        label: 'Company Calendar', path: '/calendar', permission: 'company_calendar' },
       ],
     },
   ],
@@ -61,9 +63,9 @@ export const NAV = {
     {
       section: 'PERSONAL',
       items: [
-        { icon: LayoutDashboard, label: 'Dashboard',        path: '/dashboard' },
-        { icon: CalendarDays,    label: 'My Leave',         path: '/leave' },
-        { icon: Calendar,        label: 'Company Calendar', path: '/calendar' },
+        { icon: LayoutDashboard, label: 'Dashboard',        path: '/dashboard', permission: 'dashboard' },
+        { icon: CalendarDays,    label: 'My Leave',         path: '/leave', permission: 'leave_management' },
+        { icon: Calendar,        label: 'Company Calendar', path: '/calendar', permission: 'company_calendar' },
       ],
     },
   ],
@@ -71,25 +73,26 @@ export const NAV = {
     {
       section: 'PERSONAL',
       items: [
-        { icon: LayoutDashboard, label: 'My Dashboard',     path: '/dashboard' },
-        { icon: BarChart3,       label: 'PMO Dashboard',     path: '/pmo-dashboard' },
-        { icon: BarChart2,       label: 'My Performance',    path: '/performance' },
-        { icon: CalendarDays,    label: 'My Leave',          path: '/leave' },
-        { icon: Calendar,        label: 'Company Calendar',  path: '/calendar' },
+        { icon: LayoutDashboard, label: 'My Dashboard',     path: '/dashboard', permission: 'dashboard' },
+        { icon: BarChart3,       label: 'PMO Dashboard',     path: '/pmo-dashboard', permission: 'team_performance' },
+        { icon: BarChart2,       label: 'My Performance',    path: '/performance', permission: 'performance_evaluation' },
+        { icon: CalendarDays,    label: 'My Leave',          path: '/leave', permission: 'leave_management' },
+        { icon: Calendar,        label: 'Company Calendar',  path: '/calendar', permission: 'company_calendar' },
       ],
     },
     {
       section: 'HR ADMIN',
       items: [
-        { icon: Users2,        label: 'Employee Management', path: '/employees' },
-        { icon: ClipboardList, label: 'Leave Overview',      path: '/leave-overview' },
+        { icon: Users2,        label: 'Employee Management', path: '/employees', permission: 'employee_management' },
+        { icon: ClipboardList, label: 'Leave Overview',      path: '/leave-overview', permission: 'leave_overview' },
+        { icon: ShieldCheck,   label: 'Role Management',      path: '/role-management', permission: 'role_management' },
       ],
     },
     {
       section: 'PMO',
       items: [
-        { icon: Users2,        label: 'Team Performance', path: '/team' },
-        { icon: CheckSquare,   label: 'Leave Approvals',  path: '/leave-approvals' },
+        { icon: Users2,        label: 'Team Performance', path: '/team', permission: 'team_performance' },
+        { icon: CheckSquare,   label: 'Leave Approvals',  path: '/leave-approvals', permission: 'leave_overview' },
       ],
     },
   ],

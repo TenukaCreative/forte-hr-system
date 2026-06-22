@@ -14,15 +14,15 @@ const DARK = '#15161A';
 
 // All possible nav targets keyed by a short id.
 const ITEMS = {
-  dashboard:       { icon: LayoutDashboard, label: 'Dashboard',        path: '/dashboard' },
-  leave:           { icon: ClipboardList,   label: 'Leave',            path: '/leave' },
-  calendar:        { icon: Calendar,        label: 'Calendar',         path: '/calendar' },
-  performance:     { icon: TrendingUp,      label: 'Performance',      path: '/performance' },
-  team:            { icon: Users,           label: 'Team',             path: '/team' },
-  leaveApprovals:  { icon: CheckSquare,     label: 'Leave Approvals',  path: '/leave-approvals' },
-  employees:       { icon: UserCheck,       label: 'Employees',        path: '/employees' },
-  leaveOverview:   { icon: Shield,          label: 'Leave Overview',   path: '/leave-overview' },
-  teamPerformance: { icon: BarChart3,       label: 'Team Performance', path: '/team-performance' },
+  dashboard:       { icon: LayoutDashboard, label: 'Dashboard',        path: '/dashboard',      permission: 'dashboard' },
+  leave:           { icon: ClipboardList,   label: 'Leave',            path: '/leave',          permission: 'leave_management' },
+  calendar:        { icon: Calendar,        label: 'Calendar',         path: '/calendar',       permission: 'company_calendar' },
+  performance:     { icon: TrendingUp,      label: 'Performance',      path: '/performance',    permission: 'performance_evaluation' },
+  team:            { icon: Users,           label: 'Team',             path: '/team',           permission: 'team_performance' },
+  leaveApprovals:  { icon: CheckSquare,     label: 'Leave Approvals',  path: '/leave-approvals', permission: 'leave_overview' },
+  employees:       { icon: UserCheck,       label: 'Employees',        path: '/employees',      permission: 'employee_management' },
+  leaveOverview:   { icon: Shield,          label: 'Leave Overview',   path: '/leave-overview', permission: 'leave_overview' },
+  teamPerformance: { icon: BarChart3,       label: 'Team Performance', path: '/team',           permission: 'team_performance' },
 };
 
 // Main bar + overflow ("More") items per resolved role.
@@ -52,11 +52,14 @@ const sheetRow = {
 export default function BottomNav() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { resolvedRole, logout } = useAuth();
+  const { resolvedRole, logout, hasPermission } = useAuth();
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const config = NAV_BY_ROLE[resolvedRole] || NAV_BY_ROLE.STAFF;
-  const hasMore = config.more.length > 0;
+  // Only show entries the user has permission for.
+  const mainItems = config.main.filter((key) => hasPermission(ITEMS[key].permission));
+  const moreItems = config.more.filter((key) => hasPermission(ITEMS[key].permission));
+  const hasMore = moreItems.length > 0;
 
   const isActive = (path) => pathname === path;
 
@@ -76,7 +79,7 @@ export default function BottomNav() {
           paddingBottom: 'env(safe-area-inset-bottom, 8px)',
         }}
       >
-        {config.main.map((key) => {
+        {mainItems.map((key) => {
           const item = ITEMS[key];
           const Icon = item.icon;
           const active = isActive(item.path);
@@ -128,7 +131,7 @@ export default function BottomNav() {
               </button>
             </div>
 
-            {config.more.map((key) => {
+            {moreItems.map((key) => {
               const item = ITEMS[key];
               const Icon = item.icon;
               const active = isActive(item.path);
