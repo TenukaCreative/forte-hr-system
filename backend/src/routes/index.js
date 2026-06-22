@@ -14,6 +14,7 @@ const taskRoutes = require('./tasks');
 const ethicsRoutes = require('./ethics');
 const settingsRoutes = require('./settings');
 const calendarRoutes = require('./calendar');
+const rolesRoutes = require('./roles');
 
 router.use('/auth', authRoutes);
 router.use('/employees', employeeRoutes);
@@ -28,5 +29,6 @@ router.use('/tasks', taskRoutes);
 router.use('/ethics', ethicsRoutes);
 router.use('/settings', settingsRoutes);
 router.use('/calendar', calendarRoutes);
+router.use('/roles', rolesRoutes);
 
 module.exports = router;

@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const { Op } = require('sequelize');
-const { User, Employee, LeaveRequest } = require('../models');
+const { User, Employee, LeaveRequest, Role, RolePermission } = require('../models');
 
 const getGraphProfile = async (accessToken) => {
   const { data } = await axios.get(
@@ -16,12 +16,13 @@ const getGraphProfile = async (accessToken) => {
   return data;
 };
 
-const issueJwt = (user) => {
+const issueJwt = (user, permissions = []) => {
   const payload = {
     id: user.id,
     email: user.email,
     name: user.name,
     designation: user.jobTitle || null,
+    permissions,
   };
   return {
     token: jwt.sign(payload, process.env.JWT_SECRET, {
@@ -166,7 +167,24 @@ const microsoftCallback = async (req, res, next) => {
       }
     }
 
-    const { token, user: userPayload } = issueJwt(user);
+    // Resolve the user's permission set from their assigned dynamic role (if
+    // any) so it can be embedded in the JWT and returned to the frontend.
+    let permissions = [];
+    if (user.assignedRoleId) {
+      const roleWithPerms = await Role.findOne({
+        where: { id: user.assignedRoleId },
+        include: [{
+          model: RolePermission,
+          as: 'permissions',
+          attributes: ['permissionKey'],
+        }],
+      });
+      if (roleWithPerms) {
+        permissions = roleWithPerms.permissions.map((p) => p.permissionKey);
+      }
+    }
+
+    const { token, user: userPayload } = issueJwt(user, permissions);
     return res.json({ token, user: userPayload });
   } catch (err) {
     next(err);

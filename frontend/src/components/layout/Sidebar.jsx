@@ -7,8 +7,11 @@ import { NAV } from './navConfig';
 import forteLogo from '../../assets/forte-logo.webp';
 
 export default function Sidebar() {
-  const { user, logout, resolvedRole } = useAuth();
-  const sections = NAV[resolvedRole] || [];
+  const { user, logout, resolvedRole, hasPermission } = useAuth();
+  // Filter each section's items by permission; drop sections left with no items.
+  const sections = (NAV[resolvedRole] || [])
+    .map((s) => ({ ...s, items: s.items.filter((item) => hasPermission(item.permission)) }))
+    .filter((s) => s.items.length > 0);
 
   // The JWT name can be stale after an HR edit — pull the live name from /auth/me.
   const [name, setName] = useState(user?.name);

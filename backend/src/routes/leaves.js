@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 const auth = require('../middleware/auth');
-const { authorize } = require('../middleware/rbac');
+const { authorize, authorizePermission } = require('../middleware/rbac');
 const {
   assignEntitlement,
   getEntitlement,
@@ -31,8 +31,8 @@ router.post('/entitlement', auth, authorize('HR_MANAGER', 'SUPER_ADMIN'), assign
 router.get('/entitlement/:employeeId', auth, authorize('HR_MANAGER', 'SUPER_ADMIN'), getEntitlement);
 
 // Employee routes — all authenticated users
-router.post('/request', auth, submitRequest);
-router.get('/my', auth, getMyRequests);
+router.post('/request', auth, authorizePermission('leave_management'), submitRequest);
+router.get('/my', auth, authorizePermission('leave_management'), getMyRequests);
 
 // Leave documents — employee uploads to own request; review pages fetch a SAS URL.
 // Declared before the other /:id routes to keep param handling predictable.
@@ -46,11 +46,11 @@ router.patch('/:id/manager-review', auth, managerReview);
 router.delete('/:id', auth, deleteLeaveRequest);
 
 // HR / Super Admin Step 2
-router.get('/pending-approval', auth, authorize('HR_MANAGER', 'SUPER_ADMIN'), getPendingApproval);
-router.patch('/:id/final-review', auth, authorize('HR_MANAGER', 'SUPER_ADMIN'), finalReview);
+router.get('/pending-approval', auth, authorize('HR_MANAGER', 'SUPER_ADMIN'), authorizePermission('leave_overview'), getPendingApproval);
+router.patch('/:id/final-review', auth, authorize('HR_MANAGER', 'SUPER_ADMIN'), authorizePermission('leave_overview'), finalReview);
 
 // All requests — HR / Super Admin
-router.get('/all', auth, authorize('HR_MANAGER', 'SUPER_ADMIN'), getAllRequests);
+router.get('/all', auth, authorize('HR_MANAGER', 'SUPER_ADMIN'), authorizePermission('leave_overview'), getAllRequests);
 
 // Pending for manager — any authenticated user
 router.get('/pending-manager', auth, getPendingForManager);

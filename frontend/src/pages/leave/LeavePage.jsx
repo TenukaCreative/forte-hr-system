@@ -136,8 +136,8 @@ export default function LeavePage() {
 
   const tabs = [
     { key: 'overview', label: 'Overview' },
+     { key: 'calendar', label: 'Calendar' },
     { key: 'request',  label: 'New Request' },
-    { key: 'calendar', label: 'Calendar' },
     { key: 'plan',     label: 'Leave Plan' },
   ];
 
@@ -217,7 +217,10 @@ function OverviewTab({ userId }) {
 
   const total = num(entitlement?.totalDays);
   const used = num(entitlement?.usedDays);
-  const remaining = total - used;
+  const pendingDays = requests
+    .filter((r) => r.status === 'PENDING' || r.status === 'MANAGER_APPROVED')
+    .reduce((sum, r) => sum + parseFloat(r.daysCount || 0), 0);
+  const availableDays = total - used - pendingDays;
   const hasEntitlement = entitlement && total > 0;
   const pct = total > 0 ? Math.min(100, (used / total) * 100) : 0;
 
@@ -236,10 +239,11 @@ function OverviewTab({ userId }) {
           />
         ) : (
           <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 20 }}>
               <Stat label="Total Days" value={total} />
               <Stat label="Used Days" value={used} />
-              <Stat label="Remaining" value={remaining} color={remaining > 0 ? C.green : C.red} />
+              <Stat label="Pending" value={pendingDays} color="#D97706" />
+              <Stat label="Available" value={availableDays} color={availableDays > 0 ? C.green : C.red} />
             </div>
             <div style={{ height: 8, background: '#E4E3DC', borderRadius: 6, overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${pct}%`, background: C.accent, borderRadius: 6, transition: 'width 0.4s' }} />
@@ -332,7 +336,14 @@ function RequestTab({ requests = [], onSubmitted }) {
   const [file, setFile] = useState(null);
   const [dragging, setDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [entitlement, setEntitlement] = useState(null);
   const fileRef = useRef(null);
+
+  useEffect(() => {
+    api.get('/leaves/entitlement/me')
+      .then((r) => setEntitlement(r.data))
+      .catch(() => setEntitlement(null));
+  }, []);
 
   const isHalf = leaveType === 'HALF_DAY';
 
@@ -367,6 +378,13 @@ function RequestTab({ requests = [], onSubmitted }) {
 
   // Re-evaluated each render, so it clears automatically when dates change.
   const overlap = hasDateOverlap(startDate, endDate, requests);
+
+  // Available balance = total − used − days locked up in pending requests.
+  const pendingDays = requests
+    .filter((r) => r.status === 'PENDING' || r.status === 'MANAGER_APPROVED')
+    .reduce((sum, r) => sum + parseFloat(r.daysCount || 0), 0);
+  const availableDays = num(entitlement?.totalDays) - num(entitlement?.usedDays) - pendingDays;
+  const exceedsBalance = entitlement && (availableDays <= 0 || days > availableDays);
 
   const pickFile = (f) => {
     if (!f) return;
@@ -488,6 +506,12 @@ function RequestTab({ requests = [], onSubmitted }) {
         {days > 0 && (
           <p style={{ fontSize: 13, color: C.muted, margin: '0 0 16px', padding: '10px 12px', background: '#FAFAF7', border: `1px solid ${C.border}`, borderRadius: 8 }}>
             This request will use <strong style={{ color: C.accent }}>{days}</strong> day{days !== 1 ? 's' : ''} from your balance.
+          </p>
+        )}
+
+        {exceedsBalance && (
+          <p style={{ fontSize: 13, color: C.red, margin: '0 0 16px', padding: '10px 12px', background: '#FEE2E2', border: '1px solid #FCA5A5', borderRadius: 8 }}>
+            You have {availableDays} day{availableDays !== 1 ? 's' : ''} available. This request exceeds your balance.
           </p>
         )}
 
