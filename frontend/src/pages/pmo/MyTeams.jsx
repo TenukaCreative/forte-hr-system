@@ -5,12 +5,6 @@ import api from '../../api/axios';
 import { C, card, inputStyle, fieldLabel } from '../../components/theme';
 import { Spinner, EmptyState, Button } from '../../components/ui';
 
-const seniorDesignations = (d) => {
-  if (!d) return false;
-  const lower = d.toLowerCase();
-  return lower.startsWith('head of') || lower.endsWith('lead') || d === 'Super Admin';
-};
-
 export default function MyTeams() {
   const [teams, setTeams] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
@@ -23,7 +17,7 @@ export default function MyTeams() {
     api.get('/teams').then((r) => setTeams(r.data || [])).catch(() => toast.error('Failed to load teams'));
 
   useEffect(() => {
-    Promise.all([loadTeams(), api.get('/employees/users').then((r) => setAllUsers(r.data || []))])
+    Promise.all([loadTeams(), api.get('/employees/my-reports').then((r) => setAllUsers(r.data || []))])
       .finally(() => setLoading(false));
   }, []);
 
@@ -95,7 +89,7 @@ export default function MyTeams() {
   if (loading) return <Spinner />;
 
   const memberIds = new Set((selected?.members || []).map((m) => m.id));
-  const candidates = allUsers.filter((u) => !seniorDesignations(u.designation) && !memberIds.has(u.id));
+  const candidates = allUsers.filter((u) => !memberIds.has(u.id));
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 24, alignItems: 'start' }} className="mt-grid">

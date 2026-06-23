@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 const auth = require('../middleware/auth');
-const { authorize, authorizePermission } = require('../middleware/rbac');
+const { authorizePermission } = require('../middleware/rbac');
 const {
   assignEntitlement,
   getEntitlement,
@@ -27,8 +27,8 @@ const {
 // Current user's own entitlement — must come before the :employeeId param route
 router.get('/entitlement/me', auth, getMyEntitlement);
 // HR / Super Admin only
-router.post('/entitlement', auth, authorize('HR_MANAGER', 'SUPER_ADMIN'), assignEntitlement);
-router.get('/entitlement/:employeeId', auth, authorize('HR_MANAGER', 'SUPER_ADMIN'), getEntitlement);
+router.post('/entitlement', auth, authorizePermission('leave_overview'), assignEntitlement);
+router.get('/entitlement/:employeeId', auth, authorizePermission('leave_overview'), getEntitlement);
 
 // Employee routes — all authenticated users
 router.post('/request', auth, authorizePermission('leave_management'), submitRequest);
@@ -46,11 +46,11 @@ router.patch('/:id/manager-review', auth, managerReview);
 router.delete('/:id', auth, deleteLeaveRequest);
 
 // HR / Super Admin Step 2
-router.get('/pending-approval', auth, authorize('HR_MANAGER', 'SUPER_ADMIN'), authorizePermission('leave_overview'), getPendingApproval);
-router.patch('/:id/final-review', auth, authorize('HR_MANAGER', 'SUPER_ADMIN'), authorizePermission('leave_overview'), finalReview);
+router.get('/pending-approval', auth, authorizePermission('leave_overview'), getPendingApproval);
+router.patch('/:id/final-review', auth, authorizePermission('leave_overview'), finalReview);
 
 // All requests — HR / Super Admin
-router.get('/all', auth, authorize('HR_MANAGER', 'SUPER_ADMIN'), authorizePermission('leave_overview'), getAllRequests);
+router.get('/all', auth, authorizePermission('leave_overview'), getAllRequests);
 
 // Pending for manager — any authenticated user
 router.get('/pending-manager', auth, getPendingForManager);

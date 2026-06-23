@@ -6,33 +6,15 @@ import {
   ClipboardList, BarChart3, UserCheck, MoreHorizontal,
   X, TrendingUp, CheckSquare, Shield,
 } from 'lucide-react';
+import { MASTER_NAV } from './navConfig';
 
 const ACCENT = '#C8203D';
 const INACTIVE = '#6B7280';
 const BORDER = '#E4E3DC';
 const DARK = '#15161A';
 
-// All possible nav targets keyed by a short id.
-const ITEMS = {
-  dashboard:       { icon: LayoutDashboard, label: 'Dashboard',        path: '/dashboard',      permission: 'dashboard' },
-  leave:           { icon: ClipboardList,   label: 'Leave',            path: '/leave',          permission: 'leave_management' },
-  calendar:        { icon: Calendar,        label: 'Calendar',         path: '/calendar',       permission: 'company_calendar' },
-  performance:     { icon: TrendingUp,      label: 'Performance',      path: '/performance',    permission: 'performance_evaluation' },
-  team:            { icon: Users,           label: 'Team',             path: '/team',           permission: 'team_performance' },
-  leaveApprovals:  { icon: CheckSquare,     label: 'Leave Approvals',  path: '/leave-approvals', permission: 'leave_overview' },
-  employees:       { icon: UserCheck,       label: 'Employees',        path: '/employees',      permission: 'employee_management' },
-  leaveOverview:   { icon: Shield,          label: 'Leave Overview',   path: '/leave-overview', permission: 'leave_overview' },
-  teamPerformance: { icon: BarChart3,       label: 'Team Performance', path: '/team',           permission: 'team_performance' },
-};
-
-// Main bar + overflow ("More") items per resolved role.
-const NAV_BY_ROLE = {
-  STAFF:       { main: ['dashboard', 'leave', 'calendar'],                more: [] },
-  PMO_MEMBER:  { main: ['dashboard', 'leave', 'performance', 'calendar'], more: [] },
-  SENIOR:      { main: ['dashboard', 'leave', 'team', 'leaveApprovals'],  more: ['performance', 'calendar'] },
-  HR_MANAGER:  { main: ['dashboard', 'employees', 'leaveOverview', 'calendar'], more: ['leaveApprovals'] },
-  SUPER_ADMIN: { main: ['dashboard', 'employees', 'leave', 'team'],       more: ['performance', 'calendar', 'leaveOverview', 'teamPerformance'] },
-};
+// Number of items shown in the main bar; the rest go in the "More" sheet.
+const MAIN_COUNT = 4;
 
 const tabBtn = {
   flex: 1, minWidth: 48, minHeight: 48,
@@ -52,13 +34,16 @@ const sheetRow = {
 export default function BottomNav() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { resolvedRole, logout, hasPermission } = useAuth();
+  const { logout, hasPermission } = useAuth();
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const config = NAV_BY_ROLE[resolvedRole] || NAV_BY_ROLE.STAFF;
-  // Only show entries the user has permission for.
-  const mainItems = config.main.filter((key) => hasPermission(ITEMS[key].permission));
-  const moreItems = config.more.filter((key) => hasPermission(ITEMS[key].permission));
+  // Every master-nav item the user has permission for; first few in the bar,
+  // the rest in the "More" sheet.
+  const visibleItems = MASTER_NAV
+    .flatMap((s) => s.items)
+    .filter((item) => hasPermission(item.permission));
+  const mainItems = visibleItems.slice(0, MAIN_COUNT);
+  const moreItems = visibleItems.slice(MAIN_COUNT);
   const hasMore = moreItems.length > 0;
 
   const isActive = (path) => pathname === path;
@@ -79,13 +64,12 @@ export default function BottomNav() {
           paddingBottom: 'env(safe-area-inset-bottom, 8px)',
         }}
       >
-        {mainItems.map((key) => {
-          const item = ITEMS[key];
+        {mainItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.path);
           return (
             <button
-              key={key}
+              key={item.path}
               onClick={() => go(item.path)}
               style={{ ...tabBtn, color: active ? ACCENT : INACTIVE }}
             >
@@ -131,13 +115,12 @@ export default function BottomNav() {
               </button>
             </div>
 
-            {moreItems.map((key) => {
-              const item = ITEMS[key];
+            {moreItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.path);
               return (
                 <button
-                  key={key}
+                  key={item.path}
                   onClick={() => go(item.path)}
                   style={{ ...sheetRow, borderBottom: `1px solid ${BORDER}`, color: active ? ACCENT : DARK }}
                 >

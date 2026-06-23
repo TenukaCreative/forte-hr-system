@@ -12,15 +12,14 @@ const {
 const auth = require('../middleware/auth');
 const { authorize, authorizePermission } = require('../middleware/rbac');
 
-const pmoOnly = authorize('SENIOR', 'SUPER_ADMIN');
 const teamPerf = authorizePermission('team_performance');
 
-router.get('/', auth, pmoOnly, teamPerf, getTeams);
-router.post('/', auth, pmoOnly, teamPerf, createTeam);
-router.get('/:teamId', auth, pmoOnly, teamPerf, getTeam);
-router.put('/:teamId', auth, pmoOnly, teamPerf, updateTeam);
-router.delete('/:teamId', auth, pmoOnly, teamPerf, deleteTeam);
-router.post('/:teamId/members', auth, pmoOnly, teamPerf, addMember);
-router.delete('/:teamId/members/:userId', auth, pmoOnly, teamPerf, removeMember);
+router.get('/', auth, teamPerf, getTeams);
+router.post('/', auth, teamPerf, createTeam);
+router.get('/:teamId', auth, teamPerf, getTeam);
+router.put('/:teamId', auth, teamPerf, updateTeam);
+router.delete('/:teamId', auth, teamPerf, deleteTeam);
+router.post('/:teamId/members', auth, teamPerf, addMember);
+router.delete('/:teamId/members/:userId', auth, teamPerf, removeMember);
 
 module.exports = router;
