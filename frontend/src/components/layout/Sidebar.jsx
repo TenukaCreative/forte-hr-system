@@ -3,13 +3,13 @@ import { NavLink } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
-import { NAV } from './navConfig';
+import { MASTER_NAV } from './navConfig';
 import forteLogo from '../../assets/forte-logo.webp';
 
 export default function Sidebar() {
-  const { user, logout, resolvedRole, hasPermission } = useAuth();
-  // Filter each section's items by permission; drop sections left with no items.
-  const sections = (NAV[resolvedRole] || [])
+  const { user, logout, hasPermission } = useAuth();
+  // Show every master-nav item the user has permission for; drop empty sections.
+  const sections = MASTER_NAV
     .map((s) => ({ ...s, items: s.items.filter((item) => hasPermission(item.permission)) }))
     .filter((s) => s.items.length > 0);
 

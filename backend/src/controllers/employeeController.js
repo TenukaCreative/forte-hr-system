@@ -166,4 +166,37 @@ const getProfileStatus = async (req, res) => {
   }
 };
 
-module.exports = { getEmployees, getAllUsers, getEmployee, createEmployee, updateEmployee, updateMyProfile, getProfileStatus };
+// GET /api/employees/my-reports
+// Any logged-in user lists their own active direct reports.
+const getMyDirectReports = async (req, res, next) => {
+  try {
+    const { User, Employee } = require('../models');
+
+    const directReports = await User.findAll({
+      where: {
+        managerId: req.user.id,
+        isActive: true,
+      },
+      attributes: ['id', 'name', 'email', 'jobTitle'],
+      include: [{
+        model: Employee,
+        attributes: ['id', 'designation', 'department'],
+        required: false,
+      }],
+    });
+
+    const result = directReports.map(u => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      designation: u.jobTitle || u.Employee?.designation,
+      employeeId: u.Employee?.id || null,
+    }));
+
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getEmployees, getAllUsers, getEmployee, createEmployee, updateEmployee, updateMyProfile, getProfileStatus, getMyDirectReports };

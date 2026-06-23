@@ -5,11 +5,11 @@ const {
   savePerformanceSettings,
 } = require('../controllers/settingsController');
 const auth = require('../middleware/auth');
-const { authorize } = require('../middleware/rbac');
+const { authorizePermission } = require('../middleware/rbac');
 
-const pmoOnly = authorize('SENIOR', 'SUPER_ADMIN');
+const teamPerf = authorizePermission('team_performance');
 
-router.get('/performance', auth, pmoOnly, getPerformanceSettings);
-router.post('/performance', auth, pmoOnly, savePerformanceSettings);
+router.get('/performance', auth, teamPerf, getPerformanceSettings);
+router.post('/performance', auth, teamPerf, savePerformanceSettings);
 
 module.exports = router;

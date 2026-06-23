@@ -268,8 +268,8 @@ export default function PMOPerformancePage() {
                   </span>
                 </td>
                 <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                  {ethicsMap[emp.employeeId]?.ethicsScore != null ? (() => {
-                    const sc = scoreColor(Number(ethicsMap[emp.employeeId].ethicsScore));
+                  {ethicsMap[emp.employeeId]?.latestReview?.ethicsScore != null ? (() => {
+                    const sc = scoreColor(Number(ethicsMap[emp.employeeId].latestReview.ethicsScore));
                     return (
                       <span style={{
                         background: sc === C.green ? '#dcfce7' : sc === C.amber ? '#fef3c7' : '#fee2e2',
@@ -279,7 +279,7 @@ export default function PMOPerformancePage() {
                         fontSize: 12,
                         fontWeight: 600,
                       }}>
-                        {ethicsMap[emp.employeeId].ethicsScore}
+                        {ethicsMap[emp.employeeId].latestReview.ethicsScore}
                       </span>
                     );
                   })() : (

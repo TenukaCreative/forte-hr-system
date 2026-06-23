@@ -118,28 +118,118 @@ const getLatestEthics = async (req, res, next) => {
   }
 };
 
-// GET /api/ethics/team — latest review per employee this PMO has assigned KPIs to
+// GET /api/ethics/team — latest review per member of teams created by this user
 const getTeamEthics = async (req, res, next) => {
   try {
-    const kpis = await KPI.findAll({
-      where: { assignedBy: req.user.id },
-      attributes: ['employeeId'],
-    });
-    const employeeIds = [...new Set(kpis.map((k) => k.employeeId))];
+    const { Team, TeamMember, Employee } = require('../models');
 
+    // Get all teams created by this user
+    const teams = await Team.findAll({
+      where: { createdBy: req.user.id },
+      include: [{
+        model: TeamMember,
+        attributes: ['userId'],
+      }],
+    });
+
+    // Collect all unique userIds from team members
+    const userIds = [
+      ...new Set(
+        teams.flatMap(t =>
+          (t.TeamMembers || []).map(m => m.userId)
+        )
+      )
+    ];
+
+    if (userIds.length === 0) {
+      return res.json([]);
+    }
+
+    // Find Employee records for those users
+    // Bridge the User.id → Employee.id gap
+    const employees = await Employee.findAll({
+      where: { userId: userIds },
+      include: [{
+        model: User,
+        attributes: ['id', 'name', 'email', 'jobTitle'],
+      }],
+    });
+
+    // For each employee get their latest ethics review
     const results = await Promise.all(
-      employeeIds.map(async (employeeId) => {
+      employees.map(async (employee) => {
         const review = await EthicsReview.findOne({
-          where: { employeeId },
+          where: { employeeId: employee.id },
           order: [['createdAt', 'DESC']],
         });
-        return review
-          ? { employeeId, ethicsScore: review.ethicsScore, period: review.period }
-          : null;
+
+        return {
+          employeeId: employee.id,
+          userId: employee.userId,
+          name: employee.User?.name,
+          email: employee.User?.email,
+          designation: employee.User?.jobTitle ||
+                       employee.designation,
+          isActive: true,
+          latestReview: review ? {
+            ethicsScore: review.ethicsScore,
+            period: review.period,
+          } : null,
+        };
       })
     );
 
-    res.json(results.filter(Boolean));
+    // Return ALL team members, even those
+    // without a review yet
+    res.json(results);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/ethics/team-members — employees in the logged-in user's teams
+const getTeamMembers = async (req, res, next) => {
+  try {
+    const { Team, TeamMember, Employee } = require('../models');
+
+    const teams = await Team.findAll({
+      where: { createdBy: req.user.id },
+      include: [{
+        model: TeamMember,
+        attributes: ['userId'],
+      }],
+    });
+
+    const userIds = [
+      ...new Set(
+        teams.flatMap(t =>
+          (t.TeamMembers || []).map(m => m.userId)
+        )
+      )
+    ];
+
+    if (userIds.length === 0) {
+      return res.json([]);
+    }
+
+    const employees = await Employee.findAll({
+      where: { userId: userIds },
+      include: [{
+        model: User,
+        attributes: ['id', 'name', 'email', 'jobTitle'],
+      }],
+    });
+
+    const members = employees.map(emp => ({
+      employeeId: emp.id,
+      userId: emp.userId,
+      name: emp.User?.name,
+      email: emp.User?.email,
+      designation: emp.User?.jobTitle ||
+                   emp.designation,
+    }));
+
+    res.json(members);
   } catch (err) {
     next(err);
   }
@@ -151,4 +241,5 @@ module.exports = {
   getMyEthics,
   getLatestEthics,
   getTeamEthics,
+  getTeamMembers,
 };

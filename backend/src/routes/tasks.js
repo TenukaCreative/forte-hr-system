@@ -9,18 +9,18 @@ const {
   getOverdueTasks,
 } = require('../controllers/taskController');
 const auth = require('../middleware/auth');
-const { authorize } = require('../middleware/rbac');
+const { authorizePermission } = require('../middleware/rbac');
 
-const pmoOnly = authorize('SENIOR', 'SUPER_ADMIN');
+const teamPerf = authorizePermission('team_performance');
 
 // All authenticated roles
 router.get('/my', auth, getMyTasks);
 router.patch('/:taskId/complete', auth, completeTask);
 
 // PMO only
-router.get('/overdue', auth, pmoOnly, getOverdueTasks);
-router.post('/', auth, pmoOnly, createTask);
-router.put('/:taskId', auth, pmoOnly, updateTask);
-router.delete('/:taskId', auth, pmoOnly, deleteTask);
+router.get('/overdue', auth, teamPerf, getOverdueTasks);
+router.post('/', auth, teamPerf, createTask);
+router.put('/:taskId', auth, teamPerf, updateTask);
+router.delete('/:taskId', auth, teamPerf, deleteTask);
 
 module.exports = router;

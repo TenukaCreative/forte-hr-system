@@ -6,17 +6,19 @@ const {
   getMyEthics,
   getLatestEthics,
   getTeamEthics,
+  getTeamMembers,
 } = require('../controllers/ethicsController');
 const auth = require('../middleware/auth');
-const { authorize, authorizePermission } = require('../middleware/rbac');
+const { authorizePermission } = require('../middleware/rbac');
 
-const pmoOnly = authorize('SENIOR', 'SUPER_ADMIN');
+const teamPerf = authorizePermission('team_performance');
 
 // Specific routes before dynamic /:employeeId routes
-router.get('/team', auth, pmoOnly, getTeamEthics);
+router.get('/team', auth, teamPerf, getTeamEthics);
+router.get('/team-members', auth, teamPerf, getTeamMembers);
 router.get('/my', auth, authorizePermission('performance_evaluation'), getMyEthics);
-router.get('/latest/:employeeId', auth, pmoOnly, getLatestEthics);
-router.get('/employee/:employeeId', auth, pmoOnly, getEmployeeEthics);
-router.post('/', auth, pmoOnly, createOrUpdateEthicsReview);
+router.get('/latest/:employeeId', auth, teamPerf, getLatestEthics);
+router.get('/employee/:employeeId', auth, teamPerf, getEmployeeEthics);
+router.post('/', auth, teamPerf, createOrUpdateEthicsReview);
 
 module.exports = router;

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Users2 } from 'lucide-react';
 import api from '../../api/axios';
-import { useAuth } from '../../context/AuthContext';
 import { C, card, fieldLabel, inputStyle, scoreColor, formatDate } from '../../components/theme';
 import { Spinner, EmptyState, Button, Badge } from '../../components/ui';
 
@@ -77,7 +76,6 @@ function SliderRow({ criteria, value, onChange }) {
 }
 
 export default function EthicsReviewTab() {
-  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -87,7 +85,7 @@ export default function EthicsReviewTab() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    api.get('/employees/users')
+    api.get('/ethics/team-members')
       .then((r) => setUsers(r.data || []))
       .catch(() => toast.error('Failed to load team members'))
       .finally(() => setLoading(false));
@@ -108,12 +106,12 @@ export default function EthicsReviewTab() {
   const selectUser = async (u) => {
     setSelectedUser(u);
     setForm(blankForm());
-    if (!u.employee?.id) {
+    if (!u.employeeId) {
       setExistingReviews([]);
       return;
     }
     try {
-      const r = await api.get(`/ethics/employee/${u.employee.id}`);
+      const r = await api.get(`/ethics/employee/${u.employeeId}`);
       const reviews = r.data || [];
       setExistingReviews(reviews);
       applyPeriod(reviews, period);
@@ -140,16 +138,16 @@ export default function EthicsReviewTab() {
   const reviewExists = existingReviews.some((rv) => rv.period === period);
 
   const handleSubmit = async () => {
-    if (!selectedUser?.employee?.id) {
+    if (!selectedUser?.employeeId) {
       return toast.error('This member has no employee record. Ask HR to create one first.');
     }
     setSaving(true);
     try {
-      const payload = { employeeId: selectedUser.employee.id, period, notes: form.notes };
+      const payload = { employeeId: selectedUser.employeeId, period, notes: form.notes };
       ALL_FIELDS.forEach((field) => { payload[field] = form[field]; });
       await api.post('/ethics', payload);
       toast.success('Ethics review saved');
-      const r = await api.get(`/ethics/employee/${selectedUser.employee.id}`);
+      const r = await api.get(`/ethics/employee/${selectedUser.employeeId}`);
       setExistingReviews(r.data || []);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to save review');
@@ -160,8 +158,8 @@ export default function EthicsReviewTab() {
 
   if (loading) return <Spinner />;
 
-  // A PMO cannot review themselves — keep them out of the member list.
-  const filteredUsers = users.filter((u) => u.id !== currentUser?.id);
+  // Team members are already scoped to the user's teams — show all of them.
+  const filteredUsers = users;
 
   return (
     <div>
@@ -184,9 +182,9 @@ export default function EthicsReviewTab() {
             <div>
               <style>{`.er-row:hover{background:#FAFAF7}`}</style>
               {filteredUsers.map((u) => {
-                const active = selectedUser?.id === u.id;
+                const active = selectedUser?.userId === u.userId;
                 return (
-                  <button key={u.id} className="er-row" onClick={() => selectUser(u)}
+                  <button key={u.userId} className="er-row" onClick={() => selectUser(u)}
                     style={{
                       width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12,
                       padding: '12px 16px', cursor: 'pointer', fontFamily: 'inherit',
@@ -198,7 +196,7 @@ export default function EthicsReviewTab() {
                     </div>
                     <div style={{ minWidth: 0 }}>
                       <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: C.dark }}>{u.name}</p>
-                      <p style={{ margin: '2px 0 0', fontSize: 12, color: C.muted }}>{u.role?.replace(/_/g, ' ')}</p>
+                      <p style={{ margin: '2px 0 0', fontSize: 12, color: C.muted }}>{u.designation}</p>
                     </div>
                   </button>
                 );
@@ -233,7 +231,7 @@ export default function EthicsReviewTab() {
                 </div>
               )}
 
-              {!selectedUser.employee?.id && (
+              {!selectedUser.employeeId && (
                 <div style={{
                   background: '#FEF3C7', border: '1px solid #FDE68A', color: '#92400E',
                   borderRadius: 8, padding: '10px 14px', fontSize: 13, marginBottom: 20,
@@ -288,7 +286,7 @@ export default function EthicsReviewTab() {
               <Button
                 variant="primary"
                 style={{ width: '100%', marginTop: 20, justifyContent: 'center' }}
-                disabled={saving || !selectedUser.employee?.id}
+                disabled={saving || !selectedUser.employeeId}
                 onClick={handleSubmit}
               >
                 {saving ? 'Submitting...' : 'Submit Ethics Review'}
