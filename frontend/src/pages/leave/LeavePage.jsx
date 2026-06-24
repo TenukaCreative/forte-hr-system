@@ -384,7 +384,7 @@ function RequestTab({ requests = [], onSubmitted }) {
     .filter((r) => r.status === 'PENDING' || r.status === 'MANAGER_APPROVED')
     .reduce((sum, r) => sum + parseFloat(r.daysCount || 0), 0);
   const availableDays = num(entitlement?.totalDays) - num(entitlement?.usedDays) - pendingDays;
-  const exceedsBalance = entitlement && (availableDays <= 0 || days > availableDays);
+  const exceedsBalance = entitlement && days > 0 && days > availableDays;
 
   const pickFile = (f) => {
     if (!f) return;
@@ -515,7 +515,7 @@ function RequestTab({ requests = [], onSubmitted }) {
           </p>
         )}
 
-        <Button type="submit" disabled={submitting || overlap} style={{ width: '100%', opacity: (submitting || overlap) ? 0.6 : 1 }}>
+        <Button type="submit" disabled={submitting || overlap || exceedsBalance} style={{ width: '100%', opacity: (submitting || overlap || exceedsBalance) ? 0.6 : 1 }}>
           {submitting ? 'Submitting…' : 'Submit Request'}
         </Button>
       </form>
