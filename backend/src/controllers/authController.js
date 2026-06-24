@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const { Op } = require('sequelize');
 const { User, Employee, LeaveRequest, Role, RolePermission } = require('../models');
+const { encrypt } = require('../utils/encryption');
 
 // get user data through graph api 
 const getGraphProfile = async (accessToken) => {
@@ -28,7 +29,7 @@ const issueJwt = (user, permissions = []) => {
   };
   return {
     token: jwt.sign(payload, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+      expiresIn: process.env.JWT_EXPIRES_IN || '8h',
     }),
     user: payload,
   };
@@ -102,7 +103,7 @@ const microsoftCallback = async (req, res, next) => {
     // provisioned, now that the profile has been confirmed from Azure AD.
     const tokenExpiry = new Date(Date.now() + 55 * 60 * 1000); // refresh 5 min early
     const userUpdates = {
-      msAccessToken: accessToken,
+      msAccessToken: encrypt(accessToken),
       msTokenExpiry: tokenExpiry,
       isProvisioned: true,
     };

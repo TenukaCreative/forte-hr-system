@@ -1,5 +1,6 @@
 const axios = require('axios');
 const { User } = require('../models');
+const { decrypt } = require('../utils/encryption');
 
 const GRAPH = process.env.GRAPH_API_ENDPOINT || 'https://graph.microsoft.com/v1.0';
 
@@ -45,7 +46,7 @@ const sendEmail = async ({ subject, bodyHtml }) => {
       },
       {
         headers: {
-          Authorization: `Bearer ${sender.msAccessToken}`,
+          Authorization: `Bearer ${decrypt(sender.msAccessToken)}`,
           'Content-Type': 'application/json',
         },
       }
