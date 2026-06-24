@@ -3,11 +3,15 @@ const { LeaveRequest, LeaveEntitlement, User } = require('../models');
 const resolveRole = require('../utils/resolveRole');
 const { sendEmail } = require('../services/emailService');
 
+// Parse a yyyy-mm-dd string as local midnight (not UTC midnight), so the
+// weekday is not shifted back a day in timezones ahead of UTC (e.g. Colombo).
+const parseLocalDate = (dateStr) => new Date(`${dateStr}T00:00:00`);
+
 // Count working days between two dates inclusive, excluding Saturdays/Sundays.
 const countWorkingDays = (start, end) => {
   let count = 0;
-  const current = new Date(start);
-  const endDate = new Date(end);
+  const current = parseLocalDate(start);
+  const endDate = parseLocalDate(end);
   while (current <= endDate) {
     const day = current.getDay();
     if (day !== 0 && day !== 6) count++;
@@ -123,24 +127,26 @@ const submitRequest = async (req, res, next) => {
     }
 
     // Sum days from all non-rejected active requests for this employee this year
+    const currentYear = new Date().getFullYear();
+    const yearStart = `${currentYear}-01-01`;
+    const yearEnd = `${currentYear}-12-31`;
+
     const pendingDays = await LeaveRequest.sum('daysCount', {
       where: {
         employeeId: req.user.id,
         status: { [Op.in]: ['PENDING', 'MANAGER_APPROVED'] },
         startDate: {
-          [Op.between]: [
-            new Date(new Date().getFullYear(), 0, 1),
-            new Date(new Date().getFullYear(), 11, 31)
-          ]
+          [Op.between]: [yearStart, yearEnd]
         }
       }
     }) || 0;
 
-    const effectiveUsed = entitlement.usedDays + pendingDays;
+    const effectiveUsed = parseFloat(entitlement.usedDays) + parseFloat(pendingDays);
 
-    if (effectiveUsed + workingDays > entitlement.totalDays) {
+    const totalDays = parseFloat(entitlement.totalDays);
+    if (effectiveUsed + workingDays > totalDays) {
       return res.status(400).json({
-        error: `Insufficient leave balance. You have ${entitlement.totalDays - effectiveUsed} days available (including pending requests).`
+        error: `Insufficient leave balance. You have ${totalDays - effectiveUsed} days available (including pending requests).`
       });
     }
 

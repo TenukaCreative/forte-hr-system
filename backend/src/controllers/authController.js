@@ -3,6 +3,7 @@ const axios = require('axios');
 const { Op } = require('sequelize');
 const { User, Employee, LeaveRequest, Role, RolePermission } = require('../models');
 
+// get user data through graph api 
 const getGraphProfile = async (accessToken) => {
   const { data } = await axios.get(
     `${process.env.GRAPH_API_ENDPOINT}/me`,
@@ -16,6 +17,7 @@ const getGraphProfile = async (accessToken) => {
   return data;
 };
 
+//isuing jwt token 
 const issueJwt = (user, permissions = []) => {
   const payload = {
     id: user.id,
@@ -38,7 +40,7 @@ const microsoftCallback = async (req, res, next) => {
     if (!accessToken) {
       return res.status(400).json({ message: 'Access token is required.' });
     }
-
+// adding data to profile variabl e
     let profile;
     try {
       profile = await getGraphProfile(accessToken);
@@ -56,7 +58,7 @@ const microsoftCallback = async (req, res, next) => {
     if (!azureId || !email) {
       return res.status(400).json({ message: 'Incomplete profile from Azure AD.' });
     }
-
+//finding if user is exsisting else creating new user 
     let user = await User.findOne({ where: { azureId } });
     if (!user) {
       user = await User.create({
@@ -74,7 +76,7 @@ const microsoftCallback = async (req, res, next) => {
     if (!user.isActive) {
       return res.status(403).json({ message: 'Account deactivated. Contact IT.' });
     }
-
+//check for exsisting employee else create new employeee
     const existingEmployee = await Employee.findOne({ where: { userId: user.id } });
     if (existingEmployee) {
       const adUpdates = {};
@@ -119,7 +121,7 @@ const microsoftCallback = async (req, res, next) => {
           params: { $select: 'displayName,mail,jobTitle,department' },
         }
       );
-
+//check if manager is already in the database else he is created as a new user 
       const managerEmail = managerData.mail;
       if (managerEmail) {
         let managerUser = await User.findOne({ where: { email: managerEmail } });
