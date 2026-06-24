@@ -1,5 +1,6 @@
 const axios = require('axios');
 const { User } = require('../models');
+const { decrypt } = require('../utils/encryption');
 
 const GRAPH = process.env.GRAPH_API_ENDPOINT || 'https://graph.microsoft.com/v1.0';
 
@@ -17,7 +18,7 @@ const getOutlookEvents = async (userId) => {
 
     const { data } = await axios.get(`${GRAPH}/me/events`, {
       headers: {
-        Authorization: `Bearer ${user.msAccessToken}`,
+        Authorization: `Bearer ${decrypt(user.msAccessToken)}`,
         'Content-Type': 'application/json',
       },
       params: {

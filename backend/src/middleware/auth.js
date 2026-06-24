@@ -1,11 +1,10 @@
 const jwt = require('jsonwebtoken');
 
-// TODO: will be updated when Azure AD SSO credentials are received from Forte IT
 const auth = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'No token provided' });
+    return res.status(401).json({ message: 'No token provided', code: 'NO_TOKEN' });
   }
 
   const token = authHeader.split(' ')[1];
@@ -14,8 +13,14 @@ const auth = (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
     next();
-  } catch {
-    return res.status(401).json({ message: 'Invalid or expired token' });
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Token expired', code: 'TOKEN_EXPIRED' });
+    }
+    if (err.name === 'JsonWebTokenError') {
+      return res.status(401).json({ message: 'Invalid token', code: 'INVALID_TOKEN' });
+    }
+    return res.status(401).json({ message: 'Authentication failed', code: 'AUTH_FAILED' });
   }
 };
 

@@ -1,5 +1,6 @@
 const { LeavePlan, User, Notification } = require('../models');
 const { sendLeavePlanNotification } = require('../services/emailService');
+const { decrypt } = require('../utils/encryption');
 
 // Count working days between two dates inclusive, excluding Saturdays/Sundays.
 // Copied from leaveController.js intentionally (kept self-contained here).
@@ -72,7 +73,7 @@ const createLeavePlan = async (req, res, next) => {
           endDate: endDate,
           daysCount: daysCount,
           note: note || '',
-          senderAccessToken: userRecord.msAccessToken,
+          senderAccessToken: decrypt(userRecord.msAccessToken),
         });
       }
     } catch (emailErr) {

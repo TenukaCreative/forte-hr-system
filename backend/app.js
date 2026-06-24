@@ -5,8 +5,22 @@ const path = require('path');
 
 const routes = require('./src/routes');
 const errorHandler = require('./src/middleware/errorHandler');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
+
+app.set('trust proxy', 1);
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: {
+    message: 'Too many login attempts. Please try again in 15 minutes.',
+    code: 'RATE_LIMITED'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 app.use(cors({
   origin: [
@@ -17,6 +31,7 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+app.use('/api/auth/microsoft', authLimiter);
 
 app.use('/api', routes);
 
