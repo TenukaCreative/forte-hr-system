@@ -7,6 +7,7 @@ import api from '../../api/axios';
 import { C, card, fieldLabel, inputStyle, formatDate } from '../../components/theme';
 import { Spinner, EmptyState, Badge, Button, Tabs } from '../../components/ui';
 import LeaveCalendarView from '../../components/leave/LeaveCalendarView';
+import { SingleDatePicker, WorkdayRangePicker } from '../../components/DatePicker';
 
 const LEAVE_TYPES = [
   { value: 'ANNUAL',          label: 'Annual Leave' },
@@ -432,18 +433,22 @@ function RequestTab({ requests = [], onSubmitted }) {
         {isHalf ? (
           <div style={{ marginBottom: 16 }}>
             <label style={fieldLabel}>Date</label>
-            <input type="date" style={inputStyle} value={startDate} onChange={(e) => setSingleDate(e.target.value)} />
+            <SingleDatePicker
+              value={startDate}
+              onChange={(val) => setSingleDate(val)}
+              placeholder="Select date"
+              disableWeekends
+            />
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-            <div>
-              <label style={fieldLabel}>Start Date</label>
-              <input type="date" style={inputStyle} value={startDate} onChange={(e) => handleStartDate(e.target.value)} />
-            </div>
-            <div>
-              <label style={fieldLabel}>End Date</label>
-              <input type="date" style={inputStyle} value={endDate} onChange={(e) => handleEndDate(e.target.value)} />
-            </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={fieldLabel}>Start Date &amp; End Date</label>
+            <WorkdayRangePicker
+              startDate={startDate}
+              endDate={endDate}
+              onStartChange={(val) => handleStartDate(val)}
+              onEndChange={(val) => handleEndDate(val)}
+            />
           </div>
         )}
 
@@ -605,15 +610,14 @@ function PlanTab() {
             </select>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-            <div>
-              <label style={fieldLabel}>Start Date</label>
-              <input type="date" style={inputStyle} value={startDate} onChange={(e) => handleStartDate(e.target.value)} />
-            </div>
-            <div>
-              <label style={fieldLabel}>End Date</label>
-              <input type="date" style={inputStyle} value={endDate} onChange={(e) => handleEndDate(e.target.value)} />
-            </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={fieldLabel}>Start Date &amp; End Date</label>
+            <WorkdayRangePicker
+              startDate={startDate}
+              endDate={endDate}
+              onStartChange={(val) => handleStartDate(val)}
+              onEndChange={(val) => handleEndDate(val)}
+            />
           </div>
 
           <div style={{ marginBottom: 16 }}>

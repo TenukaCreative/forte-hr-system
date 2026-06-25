@@ -15,6 +15,7 @@ import PMODashboardPage from './pages/dashboard/PMODashboardPage';
 import EmployeeManagement from './pages/hr/EmployeeManagement';
 import EmployeeDetailPage from './pages/hr/EmployeeDetailPage';
 import LeaveOverview from './pages/hr/LeaveOverview';
+import HolidayManagement from './pages/hr/HolidayManagement';
 
 // Leave pages
 import LeavePage from './pages/leave/LeavePage';
@@ -217,6 +218,16 @@ export default function App() {
           <ProtectedRoute>
             <PermissionRoute permission="leave_overview">
               <LeaveOverview />
+            </PermissionRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/holidays"
+        element={
+          <ProtectedRoute>
+            <PermissionRoute permission="manage_holidays">
+              <HolidayManagement />
             </PermissionRoute>
           </ProtectedRoute>
         }

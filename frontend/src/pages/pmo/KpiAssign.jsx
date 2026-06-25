@@ -4,6 +4,7 @@ import { Plus, ChevronDown, ChevronRight, Target, ListPlus, Trash2, Users2 } fro
 import api from '../../api/axios';
 import { C, card, inputStyle, fieldLabel, formatDate, isOverdue } from '../../components/theme';
 import { Spinner, EmptyState, Button, Badge, KpiDates } from '../../components/ui';
+import { RangeDatePicker, SingleDatePicker } from '../../components/DatePicker';
 
 const todayISO = () => new Date().toISOString().split('T')[0];
 
@@ -206,21 +207,19 @@ export default function KpiAssign() {
                     <label style={fieldLabel}>Description</label>
                     <textarea style={{ ...inputStyle, marginBottom: 12, minHeight: 56, resize: 'vertical' }} value={kpiForm.description}
                       onChange={(e) => setKpiForm({ ...kpiForm, description: e.target.value })} placeholder="Optional" />
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
-                      <div>
-                        <label style={fieldLabel}>Start Date</label>
-                        <input type="date" required min={todayISO()} style={inputStyle} value={kpiForm.startDate}
-                          onChange={(e) => setKpiForm({ ...kpiForm, startDate: e.target.value, endDate: kpiForm.endDate && kpiForm.endDate < e.target.value ? '' : kpiForm.endDate })} />
-                      </div>
-                      <div>
-                        <label style={fieldLabel}>ETA (End Date)</label>
-                        <input type="date" required min={kpiForm.startDate || todayISO()} style={inputStyle} value={kpiForm.endDate}
-                          onChange={(e) => setKpiForm({ ...kpiForm, endDate: e.target.value })} />
-                      </div>
-                      <div>
-                        <label style={fieldLabel}>Target Score</label>
-                        <input type="number" style={inputStyle} value={kpiForm.targetScore} onChange={(e) => setKpiForm({ ...kpiForm, targetScore: Number(e.target.value) })} />
-                      </div>
+                    <div style={{ marginBottom: 14 }}>
+                      <label style={fieldLabel}>Start Date &amp; ETA (End Date)</label>
+                      <RangeDatePicker
+                        startDate={kpiForm.startDate}
+                        endDate={kpiForm.endDate}
+                        onStartChange={(val) => setKpiForm({ ...kpiForm, startDate: val, endDate: kpiForm.endDate && kpiForm.endDate < val ? '' : kpiForm.endDate })}
+                        onEndChange={(val) => setKpiForm({ ...kpiForm, endDate: val })}
+                        minDate={todayISO()}
+                      />
+                    </div>
+                    <div style={{ marginBottom: 14 }}>
+                      <label style={fieldLabel}>Target Score</label>
+                      <input type="number" style={inputStyle} value={kpiForm.targetScore} onChange={(e) => setKpiForm({ ...kpiForm, targetScore: Number(e.target.value) })} />
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <Button type="submit">Assign KPI</Button>
@@ -290,8 +289,13 @@ export default function KpiAssign() {
                                   <textarea style={{ ...inputStyle, marginBottom: 10, minHeight: 48, resize: 'vertical' }} value={taskForm.description}
                                     onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })} placeholder="Description (optional)" />
                                   <label style={fieldLabel}>Deadline</label>
-                                  <input type="date" required style={{ ...inputStyle, marginBottom: 12 }} value={taskForm.deadline}
-                                    onChange={(e) => setTaskForm({ ...taskForm, deadline: e.target.value })} />
+                                  <div style={{ marginBottom: 12 }}>
+                                    <SingleDatePicker
+                                      value={taskForm.deadline}
+                                      onChange={(val) => setTaskForm({ ...taskForm, deadline: val })}
+                                      placeholder="Select deadline"
+                                    />
+                                  </div>
                                   <div style={{ display: 'flex', gap: 8 }}>
                                     <Button type="submit">Add Task</Button>
                                     <Button type="button" variant="ghost" onClick={() => setTaskForm(null)}>Cancel</Button>

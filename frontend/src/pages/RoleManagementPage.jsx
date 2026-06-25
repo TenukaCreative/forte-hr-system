@@ -15,6 +15,7 @@ const AVAILABLE_PERMISSIONS = [
   { key: 'performance_evaluation', label: 'Performance Evaluation' },
   { key: 'company_calendar', label: 'Company Calendar' },
   { key: 'role_management', label: 'Role Management' },
+  { key: 'manage_holidays', label: 'Manage Public Holidays' },
 ];
 
 const permLabel = (key) =>

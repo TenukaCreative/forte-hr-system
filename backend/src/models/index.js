@@ -15,6 +15,7 @@ const EthicsReview = require('./EthicsReview')(sequelize);
 const PerformanceSettings = require('./PerformanceSettings')(sequelize);
 const Role = require('./Role')(sequelize);
 const RolePermission = require('./RolePermission')(sequelize);
+const PublicHoliday = require('./PublicHoliday')(sequelize);
 
 // User <-> Employee
 User.hasOne(Employee, { foreignKey: 'userId' });
@@ -86,6 +87,10 @@ RolePermission.belongsTo(Role, { foreignKey: 'roleId' });
 User.belongsTo(Role, { foreignKey: 'assignedRoleId', as: 'assignedRole' });
 Role.hasMany(User, { foreignKey: 'assignedRoleId' });
 
+// PublicHoliday <-> User (creator)
+PublicHoliday.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
+User.hasMany(PublicHoliday, { foreignKey: 'createdBy' });
+
 module.exports = {
   sequelize,
   User,
@@ -103,4 +108,5 @@ module.exports = {
   PerformanceSettings,
   Role,
   RolePermission,
+  PublicHoliday,
 };

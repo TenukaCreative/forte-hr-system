@@ -6,6 +6,7 @@ import Shell from '../../components/layout/Shell';
 import { useAuth } from '../../context/AuthContext';
 import { C, formatDate } from '../../components/theme';
 import api from '../../api/axios';
+import { SingleDatePicker } from '../../components/DatePicker';
 
 const DEPARTMENTS = ['IT', 'HR', 'PMO', 'Finance', 'Operations'];
 
@@ -383,7 +384,11 @@ export default function EmployeeDetailPage() {
               </div>
               <div className="forte-group">
                 <label className="forte-label">Join Date</label>
-                <input type="date" className="forte-input" value={form.joinDate} onChange={f('joinDate')} />
+                <SingleDatePicker
+                  value={form.joinDate}
+                  onChange={(val) => setForm((p) => ({ ...p, joinDate: val }))}
+                  placeholder="Select join date"
+                />
               </div>
             </div>
             <div className="forte-group">

@@ -26,6 +26,7 @@ export default function CompanyCalendar() {
   const { resolvedRole } = useAuth();
   const [leaves, setLeaves] = useState([]);
   const [outlookEvents, setOutlookEvents] = useState([]);
+  const [holidays, setHolidays] = useState([]);
   const [loading, setLoading] = useState(true);
   const [today] = useState(new Date());
   const [viewDate, setViewDate] = useState(new Date());
@@ -66,8 +67,19 @@ export default function CompanyCalendar() {
     outlookMap[d].push(e);
   });
 
+  const holidayMap = {};
+  holidays.forEach((h) => {
+    holidayMap[h.date] = h;
+  });
+
   const prev = () => setViewDate(new Date(year, month - 1, 1));
   const next = () => setViewDate(new Date(year, month + 1, 1));
+
+  useEffect(() => {
+    api.get(`/holidays?year=${year}`)
+      .then((r) => setHolidays(r.data || []))
+      .catch(() => {});
+  }, [year]);
 
   const cells = [];
   for (let i = 0; i < firstDay; i++) cells.push(null);
@@ -109,6 +121,7 @@ export default function CompanyCalendar() {
             const dayLeaves = leaveMap[dateStr] || [];
             const dayOutlook = outlookMap[dateStr] || [];
             const isToday = dateStr === today.toISOString().slice(0, 10);
+            const holiday = holidayMap[dateStr];
             return (
               <div
                 key={dateStr}
@@ -117,10 +130,33 @@ export default function CompanyCalendar() {
                   border: `1px solid ${isToday ? '#C8203D' : '#E4E3DC'}`,
                   borderRadius: 6,
                   padding: '6px 8px',
-                  background: isToday ? 'rgba(200,32,61,0.04)' : '#fff',
+                  background: isToday
+                    ? 'rgba(200,32,61,0.04)'
+                    : holiday
+                      ? 'rgba(200,32,61,0.03)'
+                      : '#fff',
                 }}
               >
                 <span style={{ fontSize: 13, fontWeight: isToday ? 700 : 400, color: isToday ? '#C8203D' : '#15161A' }}>{day}</span>
+                {holiday && (
+                  <div
+                    title={holiday.name}
+                    style={{
+                      marginTop: 3,
+                      borderRadius: 3,
+                      padding: '2px 5px',
+                      fontSize: 10,
+                      fontWeight: 600,
+                      background: 'rgba(200,32,61,0.10)',
+                      color: '#C8203D',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    🇰🇭 {holiday.name}
+                  </div>
+                )}
                 {dayLeaves.slice(0, 3).map((l, idx) => (
                   <div
                     key={idx}
@@ -177,6 +213,10 @@ export default function CompanyCalendar() {
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ width: 12, height: 12, background: '#D1FAE5', borderRadius: 3 }} />
             Approved Leave
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 12, height: 12, background: 'rgba(200,32,61,0.10)', borderRadius: 3, border: '1px solid rgba(200,32,61,0.3)' }} />
+            Public Holiday
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ width: 12, height: 12, background: '#EEF2FF', borderRadius: 3 }} />
