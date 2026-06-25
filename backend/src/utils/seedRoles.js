@@ -9,7 +9,7 @@ const SYSTEM_ROLES = [
       'dashboard', 'leave_management', 'leave_overview',
       'employee_management', 'team_performance',
       'performance_evaluation', 'company_calendar',
-      'role_management',
+      'role_management', 'manage_holidays',
     ],
   },
   {
@@ -20,7 +20,7 @@ const SYSTEM_ROLES = [
       'dashboard', 'leave_management', 'leave_overview',
       'employee_management', 'team_performance',
       'performance_evaluation', 'company_calendar',
-      'role_management',
+      'role_management', 'manage_holidays',
     ],
   },
   {
@@ -31,7 +31,7 @@ const SYSTEM_ROLES = [
       'dashboard', 'leave_management', 'leave_overview',
       'employee_management', 'team_performance',
       'performance_evaluation', 'company_calendar',
-      'role_management',
+      'role_management', 'manage_holidays',
     ],
   },
   {
@@ -42,7 +42,7 @@ const SYSTEM_ROLES = [
       'dashboard', 'leave_management', 'leave_overview',
       'employee_management', 'team_performance',
       'performance_evaluation', 'company_calendar',
-      'role_management',
+      'role_management', 'manage_holidays',
     ],
   },
 ];
