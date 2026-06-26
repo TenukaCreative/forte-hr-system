@@ -119,11 +119,11 @@ const microsoftCallback = async (req, res, next) => {
         `${process.env.GRAPH_API_ENDPOINT}/me/manager`,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
-          params: { $select: 'displayName,mail,jobTitle,department' },
+          params: { $select: 'displayName,mail,userPrincipalName,jobTitle,department' },
         }
       );
 //check if manager is already in the database else he is created as a new user 
-      const managerEmail = managerData.mail;
+      const managerEmail = managerData.mail || managerData.userPrincipalName;
       if (managerEmail) {
         let managerUser = await User.findOne({ where: { email: managerEmail } });
         if (!managerUser) {

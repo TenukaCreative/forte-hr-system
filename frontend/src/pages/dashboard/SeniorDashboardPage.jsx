@@ -41,7 +41,7 @@ const initials = (name = '') =>
 const formatType = (t) =>
   t ? t.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : '—';
 
-export default function PMODashboardPage() {
+export default function SeniorDashboardPage() {
   const { user, resolvedRole } = useAuth();
   const navigate = useNavigate();
 

@@ -27,7 +27,7 @@ const initials = (name = '') =>
     .join('')
     .toUpperCase();
 
-export default function PMOPerformancePage() {
+export default function SeniorPerformancePage() {
   const [dashData, setDashData] = useState(null);
   const [kpis, setKpis] = useState([]);
   const [users, setUsers] = useState([]);
