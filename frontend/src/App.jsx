@@ -9,7 +9,7 @@ import LoginPage from './pages/LoginPage';
 
 // Dashboard
 import DashboardPage from './pages/dashboard/DashboardPage';
-import PMODashboardPage from './pages/dashboard/PMODashboardPage';
+import SeniorDashboardPage from './pages/dashboard/SeniorDashboardPage';
 
 // HR pages
 import EmployeeManagement from './pages/hr/EmployeeManagement';
@@ -22,7 +22,7 @@ import LeavePage from './pages/leave/LeavePage';
 
 // Performance + PMO
 import PerformancePage from './pages/performance/PerformancePage';
-import PMOPerformancePage from './pages/performance/PMOPerformancePage';
+import SeniorPerformancePage from './pages/performance/SeniorPerformancePage';
 import TeamPage from './pages/pmo/TeamPage';
 
 // Calendar
@@ -140,17 +140,17 @@ const PermissionRoute = ({ permission, children }) => {
 };
 
 function PerformanceRouter() {
-  const { resolvedRole } = useAuth();
-  if (resolvedRole === 'SENIOR' || resolvedRole === 'SUPER_ADMIN') {
-    return <PMOPerformancePage />;
+  const { hasPermission } = useAuth();
+  if (hasPermission('team_performance')) {
+    return <SeniorPerformancePage />;
   }
   return <PerformancePage />;
 }
 
 function DashboardRouter() {
-  const { resolvedRole } = useAuth();
-  if (resolvedRole === 'SENIOR' || resolvedRole === 'SUPER_ADMIN') {
-    return <PMODashboardPage />;
+  const { hasPermission } = useAuth();
+  if (hasPermission('team_performance')) {
+    return <SeniorDashboardPage />;
   }
   return <DashboardPage />;
 }

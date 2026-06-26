@@ -372,8 +372,8 @@ function ApprovalsView({ kind }) {
 
 // ── Tab 4: Team Leave (Gantt timeline, view-only) ─────────────
 function TeamLeaveView() {
-  const { resolvedRole } = useAuth();
-  const isHr = resolvedRole === 'HR_MANAGER' || resolvedRole === 'SUPER_ADMIN';
+  const { hasPermission } = useAuth();
+  const isHr = hasPermission('leave_overview');
 
   const [teamLeaves, setTeamLeaves] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -536,9 +536,9 @@ function TeamPlansView() {
 }
 
 export default function LeaveOverview() {
-  const { resolvedRole } = useAuth();
-  const isSenior = resolvedRole === 'SENIOR' || resolvedRole === 'SUPER_ADMIN';
-  const isHr = resolvedRole === 'HR_MANAGER' || resolvedRole === 'SUPER_ADMIN';
+  const { hasPermission } = useAuth();
+  const isHr = hasPermission('leave_overview');
+  const isSenior = hasPermission('team_performance') || hasPermission('leave_overview');
 
   const tabs = [];
   if (isHr) tabs.push({ key: 'all', label: 'All Requests' });
