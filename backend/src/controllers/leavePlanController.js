@@ -120,6 +120,15 @@ const getMyPlans = async (req, res, next) => {
 // Manager sees all plans from their direct reports
 const getTeamPlans = async (req, res, next) => {
   try {
+    // A caller may hold team_performance yet have nobody reporting to them in
+    // AD. Treat that as forbidden rather than returning a silent empty list.
+    const directReportCount = await User.count({
+      where: { managerId: req.user.id },
+    });
+    if (directReportCount === 0) {
+      return res.status(403).json({ message: 'You do not have any direct reports.' });
+    }
+
     const plans = await LeavePlan.findAll({
       where: { managerId: req.user.id },
       include: [{ model: User, as: 'employee',
