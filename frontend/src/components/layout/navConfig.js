@@ -37,7 +37,7 @@ export const MASTER_NAV = [
     section: 'TEAMS',
     items: [
       { icon: Users2,       label: 'Team Performance', path: '/team', permission: 'team_performance' },
-      { icon: CheckSquare,  label: 'Leave Approvals',  path: '/leave-approvals', permission: 'leave_overview' },
+      { icon: CheckSquare,  label: 'Leave Approvals',  path: '/leave-approvals', permission: 'team_performance' },
     ],
   },
 ];

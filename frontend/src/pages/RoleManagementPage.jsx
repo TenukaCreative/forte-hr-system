@@ -1,34 +1,101 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { ShieldCheck, Lock, Plus, Pencil, Trash2 } from 'lucide-react';
+import { ShieldCheck, Lock, Plus, Pencil, Trash2, Check } from 'lucide-react';
 import Shell from '../components/layout/Shell';
 import { C, card, fieldLabel, inputStyle } from '../components/theme';
 import { Spinner, EmptyState, Button } from '../components/ui';
 import api from '../api/axios';
 
-const AVAILABLE_PERMISSIONS = [
-  { key: 'dashboard', label: 'Dashboard' },
-  { key: 'leave_management', label: 'My Leave' },
-  { key: 'leave_overview', label: 'Leave Overview (Admin)' },
-  { key: 'employee_management', label: 'Employee Management' },
-  { key: 'team_performance', label: 'Team Performance' },
-  { key: 'performance_evaluation', label: 'Performance Evaluation' },
-  { key: 'company_calendar', label: 'Company Calendar' },
-  { key: 'role_management', label: 'Role Management' },
-  { key: 'manage_holidays', label: 'Manage Public Holidays' },
+// Access is granted in three categories. Each category maps to one or more
+// underlying permission keys (unchanged in the JWT/enforcement layer). The
+// "Personal" keys (dashboard, leave_management, performance_evaluation,
+// company_calendar) are baseline — granted to everyone at login — so they are
+// deliberately NOT represented here and are never read or written by this screen.
+const CATEGORIES = [
+  {
+    key: 'hr_admin',
+    label: 'HR Admin',
+    subtext: 'Employee Management, Leave Overview, Holiday Management',
+    keys: ['employee_management', 'leave_overview', 'manage_holidays'],
+  },
+  {
+    key: 'team',
+    label: 'Team',
+    subtext: 'Team Performance, Leave Approvals',
+    keys: ['team_performance'],
+  },
+  {
+    key: 'role_management',
+    label: 'Role Management',
+    subtext: 'Create and edit roles',
+    keys: ['role_management'],
+  },
 ];
 
-const permLabel = (key) =>
-  AVAILABLE_PERMISSIONS.find((p) => p.key === key)?.label || key;
+// Every permission key this screen is allowed to add or remove. Anything outside
+// this set (e.g. baseline personal keys) is preserved untouched on save.
+const MANAGED_KEYS = CATEGORIES.flatMap((c) => c.keys);
 
 // Roles come back from the API with permissions as [{ permissionKey }].
 const permKeys = (role) => (role?.permissions || []).map((p) => p.permissionKey);
+
+// A category is considered "on" only when ALL of its underlying keys are present.
+const categoryOn = (cat, keys) => cat.keys.every((k) => keys.includes(k));
+
+// Short category-name summary for the role list card.
+const categorySummary = (role) => {
+  const keys = permKeys(role);
+  const names = CATEGORIES.filter((c) => categoryOn(c, keys)).map((c) => c.label);
+  return names.length ? names.join(' · ') : 'Baseline only';
+};
 
 const systemPill = {
   display: 'inline-flex', alignItems: 'center', gap: 4,
   background: '#F1F0EB', color: C.muted, borderRadius: 100,
   padding: '3px 10px', fontSize: 11, fontWeight: 600, letterSpacing: '0.03em',
 };
+
+// Styled checkbox card — matches the app's white-card / #E4E3DC border /
+// #C8203D accent conventions instead of a raw browser checkbox.
+function CheckCard({ label, subtext, checked, disabled, onToggle }) {
+  return (
+    <div
+      onClick={disabled ? undefined : onToggle}
+      style={{
+        display: 'flex', alignItems: 'flex-start', gap: 12,
+        padding: '14px 16px', borderRadius: 10,
+        border: `1px solid ${checked ? C.accent : C.border}`,
+        background: checked ? 'rgba(200,32,61,0.04)' : '#fff',
+        cursor: disabled ? 'default' : 'pointer',
+        transition: 'border-color 0.15s, background 0.15s',
+      }}
+    >
+      <span style={{
+        width: 20, height: 20, borderRadius: 6, flexShrink: 0, marginTop: 1,
+        border: `1.5px solid ${checked ? C.accent : C.border}`,
+        background: checked ? C.accent : '#fff',
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'border-color 0.15s, background 0.15s',
+      }}>
+        {checked && <Check size={13} color="#fff" strokeWidth={3} />}
+      </span>
+      <span style={{ minWidth: 0 }}>
+        <span style={{ display: 'block', fontSize: 15, fontWeight: 600, color: C.dark }}>{label}</span>
+        <span style={{ display: 'block', fontSize: 12, color: C.muted, marginTop: 2 }}>{subtext}</span>
+      </span>
+    </div>
+  );
+}
+
+// Informational note: the baseline permissions everyone receives automatically.
+function BaselineNote() {
+  return (
+    <p style={{ fontSize: 12, color: C.muted, margin: '12px 2px 0', lineHeight: 1.5 }}>
+      Every employee automatically gets: My Dashboard, My Performance, My Leave,
+      Company Calendar
+    </p>
+  );
+}
 
 export default function RoleManagementPage() {
   const [roles, setRoles] = useState(null); // null = loading
@@ -39,7 +106,11 @@ export default function RoleManagementPage() {
   const [activeId, setActiveId] = useState(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedPerms, setSelectedPerms] = useState([]);
+  // Which category keys ('hr_admin' | 'team' | 'role_management') are checked.
+  const [selectedCats, setSelectedCats] = useState([]);
+  // Any keys on the role that this screen does not manage (e.g. baseline keys);
+  // preserved verbatim on save so the full-replace PATCH never deletes them.
+  const [preservedKeys, setPreservedKeys] = useState([]);
   const [saving, setSaving] = useState(false);
 
   const loadRoles = () => {
@@ -57,7 +128,8 @@ export default function RoleManagementPage() {
     setActiveId(null);
     setName('');
     setDescription('');
-    setSelectedPerms([]);
+    setSelectedCats([]);
+    setPreservedKeys([]);
   };
 
   const startCreate = () => {
@@ -65,29 +137,43 @@ export default function RoleManagementPage() {
     setActiveId(null);
     setName('');
     setDescription('');
-    setSelectedPerms([]);
+    setSelectedCats([]);
+    setPreservedKeys([]);
   };
 
   const openRole = (role) => {
+    const keys = permKeys(role);
     setActiveId(role.id);
     setName(role.name || '');
     setDescription(role.description || '');
-    setSelectedPerms(permKeys(role));
+    setSelectedCats(CATEGORIES.filter((c) => categoryOn(c, keys)).map((c) => c.key));
+    setPreservedKeys(keys.filter((k) => !MANAGED_KEYS.includes(k)));
     setMode(role.isSystem ? 'view' : 'edit');
   };
 
-  const togglePerm = (key) => {
-    setSelectedPerms((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+  const toggleCat = (catKey) => {
+    setSelectedCats((prev) =>
+      prev.includes(catKey) ? prev.filter((k) => k !== catKey) : [...prev, catKey]
     );
+  };
+
+  // Final permission set = checked categories' keys + any preserved (unmanaged)
+  // keys. Deduped. Baseline keys are only ever in here via preservedKeys — never
+  // added by this screen.
+  const buildPermissions = () => {
+    const selectedKeys = CATEGORIES
+      .filter((c) => selectedCats.includes(c.key))
+      .flatMap((c) => c.keys);
+    return [...new Set([...preservedKeys, ...selectedKeys])];
   };
 
   const save = async () => {
     if (!name.trim()) return toast.error('Role name is required');
-    if (selectedPerms.length === 0) return toast.error('Select at least one permission');
+    const permissions = buildPermissions();
+    if (permissions.length === 0) return toast.error('Select at least one access category');
     setSaving(true);
     try {
-      const body = { name: name.trim(), description: description.trim(), permissions: selectedPerms };
+      const body = { name: name.trim(), description: description.trim(), permissions };
       if (mode === 'create') {
         await api.post('/roles', body);
         toast.success('Role created');
@@ -161,7 +247,7 @@ export default function RoleManagementPage() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {roles.map((role) => {
-                const count = permKeys(role).length;
+                const summary = categorySummary(role);
                 const isActive = activeId === role.id;
                 return (
                   <div
@@ -183,7 +269,7 @@ export default function RoleManagementPage() {
                           )}
                         </div>
                         <p style={{ margin: '4px 0 0', fontSize: 12, color: C.muted }}>
-                          {count} permission{count !== 1 ? 's' : ''}
+                          {summary}
                           {role.description ? ` · ${role.description}` : ''}
                         </p>
                       </div>
@@ -230,18 +316,19 @@ export default function RoleManagementPage() {
               <p style={{ fontSize: 13, color: C.muted, margin: '0 0 18px' }}>
                 {description || 'System role'} · read-only
               </p>
-              <p style={fieldLabel}>Permissions</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {AVAILABLE_PERMISSIONS.map((p) => {
-                  const on = selectedPerms.includes(p.key);
-                  return (
-                    <div key={p.key} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: on ? C.dark : C.faint }}>
-                      <input type="checkbox" checked={on} disabled readOnly />
-                      <span>{p.label}</span>
-                    </div>
-                  );
-                })}
+              <p style={fieldLabel}>Access</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {CATEGORIES.map((c) => (
+                  <CheckCard
+                    key={c.key}
+                    label={c.label}
+                    subtext={c.subtext}
+                    checked={selectedCats.includes(c.key)}
+                    disabled
+                  />
+                ))}
               </div>
+              <BaselineNote />
             </div>
           ) : (
             <div>
@@ -269,21 +356,21 @@ export default function RoleManagementPage() {
                 />
               </div>
 
-              <p style={fieldLabel}>Permissions</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
-                {AVAILABLE_PERMISSIONS.map((p) => (
-                  <label key={p.key} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: C.dark, cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={selectedPerms.includes(p.key)}
-                      onChange={() => togglePerm(p.key)}
-                    />
-                    <span>{p.label}</span>
-                  </label>
+              <p style={fieldLabel}>Access</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 4 }}>
+                {CATEGORIES.map((c) => (
+                  <CheckCard
+                    key={c.key}
+                    label={c.label}
+                    subtext={c.subtext}
+                    checked={selectedCats.includes(c.key)}
+                    onToggle={() => toggleCat(c.key)}
+                  />
                 ))}
               </div>
+              <BaselineNote />
 
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
                 <Button onClick={save} disabled={saving} style={{ opacity: saving ? 0.6 : 1 }}>
                   {saving ? 'Saving…' : (mode === 'create' ? 'Create Role' : 'Save Changes')}
                 </Button>

@@ -132,6 +132,21 @@ const getTeamPlans = async (req, res, next) => {
   }
 };
 
+// GET /api/leave-plans/all
+// HR / Super Admin sees leave plans from all employees org-wide
+const getAllPlans = async (req, res, next) => {
+  try {
+    const plans = await LeavePlan.findAll({
+      include: [{ model: User, as: 'employee',
+        attributes: ['id', 'name', 'email', 'jobTitle'] }],
+      order: [['startDate', 'ASC']],
+    });
+    res.json(plans);
+  } catch (err) {
+    next(err);
+  }
+};
+
 // DELETE /api/leave-plans/:id
 // Employee deletes one of their own plans
 const deleteLeavePlan = async (req, res, next) => {
@@ -159,5 +174,6 @@ module.exports = {
   createLeavePlan,
   getMyPlans,
   getTeamPlans,
+  getAllPlans,
   deleteLeavePlan,
 };

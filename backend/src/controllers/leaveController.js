@@ -316,6 +316,28 @@ const getAllRequests = async (req, res, next) => {
   }
 };
 
+// GET /api/leaves/team
+// Reporting manager sees ALL requests (any status) from their direct reports
+const getTeamRequests = async (req, res, next) => {
+  try {
+    const requests = await LeaveRequest.findAll({
+      where: { managerId: req.user.id },
+      include: [
+        { model: User, as: 'employee',
+          attributes: ['id', 'name', 'email', 'jobTitle'] },
+        { model: User, as: 'manager',
+          attributes: ['id', 'name'] },
+        { model: User, as: 'approver',
+          attributes: ['id', 'name'] },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+    res.json(requests);
+  } catch (err) {
+    next(err);
+  }
+};
+
 // GET /api/leaves/team-approved
 // Reporting manager sees their direct reports who are on approved leave today
 const getTeamApprovedLeaves = async (req, res, next) => {
@@ -473,6 +495,7 @@ module.exports = {
   getPendingApproval,
   finalReview,
   getAllRequests,
+  getTeamRequests,
   getTeamApprovedLeaves,
   uploadLeaveDocument,
   getLeaveDocument,

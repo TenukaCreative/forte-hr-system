@@ -15,6 +15,7 @@ import SeniorDashboardPage from './pages/dashboard/SeniorDashboardPage';
 import EmployeeManagement from './pages/hr/EmployeeManagement';
 import EmployeeDetailPage from './pages/hr/EmployeeDetailPage';
 import LeaveOverview from './pages/hr/LeaveOverview';
+import LeaveApprovals from './pages/hr/LeaveApprovals';
 import HolidayManagement from './pages/hr/HolidayManagement';
 
 // Leave pages
@@ -248,9 +249,9 @@ export default function App() {
         path="/leave-approvals"
         element={
           <ProtectedRoute>
-            <RoleRoute roles={['SENIOR', 'HR_MANAGER', 'SUPER_ADMIN']}>
-              <LeaveOverview />
-            </RoleRoute>
+            <PermissionRoute permission="team_performance">
+              <LeaveApprovals />
+            </PermissionRoute>
           </ProtectedRoute>
         }
       />
