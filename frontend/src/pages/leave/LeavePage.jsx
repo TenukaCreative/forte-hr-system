@@ -135,6 +135,11 @@ export default function LeavePage() {
     }
   }, [tab]);
 
+  // Drop the cached calendar data so the lazy-fetch effect re-runs (it reloads
+  // both /leaves/my and /leave-plans/my once myRequests is null again). Called
+  // after any mutation so the Calendar tab never shows stale data.
+  const invalidateCalendarCache = () => setMyRequests(null);
+
   const tabs = [
     { key: 'overview', label: 'Overview' },
      { key: 'calendar', label: 'Calendar' },
@@ -157,8 +162,8 @@ export default function LeavePage() {
         <Tabs tabs={tabs} active={tab} onChange={setTab} />
       </div>
 
-      {tab === 'overview' && <OverviewTab userId={user?.id} />}
-      {tab === 'request'  && <RequestTab requests={myRequests || []} onSubmitted={() => setTab('overview')} />}
+      {tab === 'overview' && <OverviewTab userId={user?.id} onDataChanged={invalidateCalendarCache} />}
+      {tab === 'request'  && <RequestTab requests={myRequests || []} onSubmitted={() => { invalidateCalendarCache(); setTab('overview'); }} />}
       {tab === 'calendar' && (
         <LeaveCalendarView
           requests={myRequests || []}
@@ -168,13 +173,13 @@ export default function LeavePage() {
           leaveTypeLabels={LEAVE_TYPE_LABELS}
         />
       )}
-      {tab === 'plan'     && <PlanTab />}
+      {tab === 'plan'     && <PlanTab onDataChanged={invalidateCalendarCache} />}
     </Shell>
   );
 }
 
 // ── Overview ──────────────────────────────────────────────────
-function OverviewTab({ userId }) {
+function OverviewTab({ userId, onDataChanged }) {
   const [loading, setLoading] = useState(true);
   const [entitlement, setEntitlement] = useState(null);
   const [requests, setRequests] = useState([]);
@@ -202,6 +207,7 @@ function OverviewTab({ userId }) {
       toast.success('Leave request cancelled');
       setConfirmId(null);
       load();
+      onDataChanged();
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to cancel request');
     }
@@ -529,7 +535,7 @@ function RequestTab({ requests = [], onSubmitted }) {
 }
 
 // ── Leave Plan ────────────────────────────────────────────────
-function PlanTab() {
+function PlanTab({ onDataChanged }) {
   const [leaveType, setLeaveType] = useState('ANNUAL');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -575,6 +581,7 @@ function PlanTab() {
       setEndDate('');
       setNote('');
       loadPlans();
+      onDataChanged();
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to add plan');
     } finally {
@@ -588,6 +595,7 @@ function PlanTab() {
       toast.success('Leave plan removed');
       setConfirmId(null);
       loadPlans();
+      onDataChanged();
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to remove plan');
     }
