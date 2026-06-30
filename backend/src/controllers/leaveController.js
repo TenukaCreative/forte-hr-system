@@ -339,16 +339,14 @@ const getTeamRequests = async (req, res, next) => {
 };
 
 // GET /api/leaves/team-approved
-// Reporting manager sees their direct reports who are on approved leave today
+// Reporting manager sees the full approved-leave history for their direct
+// reports (not just leave active today), ordered by start date.
 const getTeamApprovedLeaves = async (req, res, next) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
     const requests = await LeaveRequest.findAll({
       where: {
         managerId: req.user.id,
         status: 'APPROVED',
-        startDate: { [Op.lte]: today },
-        endDate: { [Op.gte]: today },
       },
       include: [
         {
@@ -357,6 +355,7 @@ const getTeamApprovedLeaves = async (req, res, next) => {
           attributes: ['id', 'name', 'email', 'jobTitle'],
         },
       ],
+      order: [['startDate', 'ASC']],
     });
     res.json(requests);
   } catch (err) {
