@@ -17,6 +17,7 @@ const {
   getPendingApproval,
   finalReview,
   getAllRequests,
+  getTeamRequests,
   getTeamApprovedLeaves,
   uploadLeaveDocument,
   getLeaveDocument,
@@ -51,6 +52,9 @@ router.patch('/:id/final-review', auth, authorizePermission('leave_overview'), f
 
 // All requests — HR / Super Admin
 router.get('/all', auth, authorizePermission('leave_overview'), getAllRequests);
+
+// Team requests (any status) — reporting manager / senior
+router.get('/team', auth, authorizePermission('team_performance'), getTeamRequests);
 
 // Pending for manager — any authenticated user
 router.get('/pending-manager', auth, getPendingForManager);

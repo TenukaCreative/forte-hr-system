@@ -187,6 +187,18 @@ const microsoftCallback = async (req, res, next) => {
       }
     }
 
+    // Baseline permissions every user gets regardless of assigned role — these
+    // mirror the frontend ALWAYS_ALLOWED list so the JWT and UI agree, and an
+    // unassigned user can actually use the pages the frontend lets them open.
+    // Deduped against role-granted keys via a Set.
+    const BASELINE_PERMISSIONS = [
+      'dashboard',
+      'leave_management',
+      'performance_evaluation',
+      'company_calendar',
+    ];
+    permissions = [...new Set([...permissions, ...BASELINE_PERMISSIONS])];
+
     const { token, user: userPayload } = issueJwt(user, permissions);
     return res.json({ token, user: userPayload });
   } catch (err) {

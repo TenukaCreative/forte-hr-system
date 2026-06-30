@@ -2,22 +2,22 @@ import { useState } from 'react';
 import Shell from '../../components/layout/Shell';
 import { Tabs } from '../../components/ui';
 import {
-  RequestsTable,
   ApprovalsView,
+  RequestsTable,
   TeamLeaveView,
   PlansTable,
 } from '../../components/leave/LeaveOverviewShared';
 
-// HR / Super Admin leave dashboard — reached only via the leave_overview-gated
-// route, so the four tabs are always shown (no per-permission tab juggling).
+// Senior / Manager leave dashboard — reached via the team_performance-gated
+// route. Everything here is scoped to the manager's direct reports.
 const TABS = [
-  { key: 'all', label: 'All Requests' },
-  { key: 'final', label: 'Final Approvals' },
+  { key: 'team-approvals', label: 'Team Approvals' },
+  { key: 'team-requests', label: 'Team Requests' },
   { key: 'team-leave', label: 'Team Leave' },
-  { key: 'team-plans', label: 'Team Plans' },
+  { key: 'team-plan', label: 'Team Plan' },
 ];
 
-export default function LeaveOverview() {
+export default function LeaveApprovals() {
   const [tab, setTab] = useState(TABS[0].key);
 
   return (
@@ -25,10 +25,10 @@ export default function LeaveOverview() {
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, color: '#15161A', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
-          Leave Overview
+          Leave Approvals
         </h1>
         <p style={{ fontSize: 14, color: 'rgba(21,22,26,0.5)', margin: 0 }}>
-          Review and manage leave requests
+          Review and manage your team's leave
         </p>
       </div>
 
@@ -36,10 +36,10 @@ export default function LeaveOverview() {
         <Tabs tabs={TABS} active={tab} onChange={setTab} />
       </div>
 
-      {tab === 'all' && <RequestsTable endpoint="/leaves/all" badgeLabel="All" />}
-      {tab === 'final' && <ApprovalsView kind="final" />}
-      {tab === 'team-leave' && <TeamLeaveView scope="all" />}
-      {tab === 'team-plans' && <PlansTable endpoint="/leave-plans/all" />}
+      {tab === 'team-approvals' && <ApprovalsView kind="team" />}
+      {tab === 'team-requests' && <RequestsTable endpoint="/leaves/team" badgeLabel="Team" />}
+      {tab === 'team-leave' && <TeamLeaveView scope="team" />}
+      {tab === 'team-plan' && <PlansTable endpoint="/leave-plans/team" />}
     </Shell>
   );
 }
