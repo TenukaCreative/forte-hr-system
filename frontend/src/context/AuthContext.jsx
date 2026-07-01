@@ -4,7 +4,7 @@ import { loginWithAzure, logoutFromAzure } from '../auth/authService';
 const AuthContext = createContext(null);
 
 // Pages every logged-in user can always reach, no assigned role required.
-// Admin/PMO areas (employee_management, leave_overview, team_performance,
+// Admin/senior areas (employee_management, leave_overview, team_performance,
 // role_management) are intentionally NOT included — those require an
 // explicitly granted permission.
 const ALWAYS_ALLOWED = [

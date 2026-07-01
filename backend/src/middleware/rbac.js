@@ -1,14 +1,3 @@
-const resolveRole = require('../utils/resolveRole');
-
-const authorize = (...allowedRoles) => {
-  return (req, res, next) => {
-    const resolvedRole = resolveRole(req.user?.designation);
-    if (!allowedRoles.includes(resolvedRole)) {
-      return res.status(403).json({ message: 'Forbidden' });
-    }
-    next();
-  };
-};
 
 const authorizePermission = (...permissionKeys) => {
   return (req, res, next) => {
@@ -50,6 +39,5 @@ const authorizePermission = (...permissionKeys) => {
 };
 
 module.exports = {
-  authorize,           // keep existing export
   authorizePermission  // add new export
 };
