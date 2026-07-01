@@ -183,6 +183,7 @@ function OverviewTab({ userId, onDataChanged }) {
   const [loading, setLoading] = useState(true);
   const [entitlement, setEntitlement] = useState(null);
   const [requests, setRequests] = useState([]);
+  const [plans, setPlans] = useState([]);
   const [confirmId, setConfirmId] = useState(null);
 
   const load = () => {
@@ -191,10 +192,12 @@ function OverviewTab({ userId, onDataChanged }) {
     Promise.all([
       api.get('/leaves/entitlement/me').then((r) => r.data).catch(() => null),
       api.get('/leaves/my').then((r) => r.data).catch(() => []),
+      api.get('/leave-plans/my').then((r) => r.data).catch(() => []),
     ])
-      .then(([ent, reqs]) => {
+      .then(([ent, reqs, plans]) => {
         setEntitlement(ent);
         setRequests(reqs || []);
+        setPlans(plans || []);
       })
       .finally(() => setLoading(false));
   };
@@ -246,11 +249,12 @@ function OverviewTab({ userId, onDataChanged }) {
           />
         ) : (
           <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 20 }}>
               <Stat label="Total Days" value={total} />
               <Stat label="Used Days" value={used} />
               <Stat label="Pending" value={pendingDays} color="#D97706" />
               <Stat label="Available" value={availableDays} color={availableDays > 0 ? C.green : C.red} />
+              <Stat label="Planned" value={plans.length} color={plans.length > 0 ? C.amber : C.dark} />
             </div>
             <div style={{ height: 8, background: '#E4E3DC', borderRadius: 6, overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${pct}%`, background: C.accent, borderRadius: 6, transition: 'width 0.4s' }} />
@@ -288,6 +292,11 @@ function OverviewTab({ userId, onDataChanged }) {
                     <p style={{ margin: '3px 0 0', fontSize: 12, color: C.muted }}>
                       {formatDate(r.startDate)} → {formatDate(r.endDate)} · {num(r.daysCount)} day{num(r.daysCount) !== 1 ? 's' : ''}
                     </p>
+                    {r.manager?.name && (
+  <p style={{ margin: '2px 0 0', fontSize: 12, color: C.muted }}>
+    Approver: {r.manager.name}
+  </p>
+)}
                   </div>
                   <Badge status={r.status} />
                 </div>

@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { C, card, formatDate } from '../theme';
 import { Badge } from '../ui';
+import api from '../../api/axios';
 
 // Leave plans use a single distinct colour, separate from the leave-type colours.
-const PLAN_COLOR = '#7288FA';
+const PLAN_COLOR = '#305669';
 
 // Human-readable status text for the day tooltip.
 const STATUS_TEXT = {
@@ -54,16 +55,26 @@ export default function LeaveCalendarView({
   const typeLabel = (type) => leaveTypeLabels[type] || type;
   const [viewDate, setViewDate] = useState(new Date());
   const [openDay, setOpenDay] = useState(null); // YYYY-MM-DD of the open popover
+  const [holidays, setHolidays] = useState([]);
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
   const todayStr = ymd(new Date());
+
+  useEffect(() => {
+    api.get(`/holidays?year=${year}`)
+      .then((r) => setHolidays(r.data || []))
+      .catch(() => {});
+  }, [year]);
 
   const days = getDaysInMonth(year, month);
   // Leading blanks so the 1st lands under the right weekday (Mon-first grid).
   const firstWeekday = (new Date(year, month, 1).getDay() + 6) % 7;
   const leading = Array.from({ length: firstWeekday }, () => null);
   const cells = [...leading, ...days];
+
+  const holidayMap = {};
+  holidays.forEach((h) => { holidayMap[h.date] = h; });
 
   const prev = () => { setOpenDay(null); setViewDate(new Date(year, month - 1, 1)); };
   const next = () => { setOpenDay(null); setViewDate(new Date(year, month + 1, 1)); };
@@ -104,21 +115,22 @@ export default function LeaveCalendarView({
             (r) => r.status !== 'REJECTED' && isLeaveOnDate(r, date)
           ) || null;
           const plan = plans.find((p) => isLeaveOnDate(p, date)) || null;
+          const holiday = holidayMap[dateStr];
 
           // Background + text. A leave request takes priority over a plan.
           let bg = isWeekend ? '#F9FAFB' : '#fff';
           let textColor = C.dark;
           if (leave) {
-            const typeColor = getLeaveTypeColor(leave.leaveType);
             if (leave.status === 'APPROVED') {
-              bg = typeColor; // solid
-              textColor = getLeaveTypeTextColor(leave.leaveType);
+              bg = '#16a34a';
+              textColor = '#ffffff';
             } else {
-              // PENDING / MANAGER_APPROVED — faded to distinguish from approved.
-              bg = withAlpha(typeColor, 0.5);
+              bg = withAlpha('#d97706', 0.5);
+              textColor = C.dark;
             }
           } else if (plan) {
-            bg = withAlpha(PLAN_COLOR, 0.6);
+            bg = withAlpha('#305669', 0.6);
+            textColor = '#ffffff';
           }
           // A day with both a request and a plan shows the request colour plus a dot.
           const showPlanDot = !!(leave && plan);
@@ -151,6 +163,29 @@ export default function LeaveCalendarView({
               }}
             >
               {date.getDate()}
+
+              {holiday && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: 4,
+                  left: 2,
+                  right: 2,
+                  borderRadius: 3,
+                  padding: '1px 4px',
+                  fontSize: 9,
+                  fontWeight: 600,
+                  background: 'rgba(200,32,61,0.10)',
+                  color: '#C8203D',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  textAlign: 'center',
+                }}
+                  title={holiday.name}
+                >
+                  🇰🇭 {holiday.name}
+                </div>
+              )}
 
               {showPlanDot && (
                 <span style={{
@@ -192,9 +227,10 @@ export default function LeaveCalendarView({
       {/* Legend */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 18 }}>
         {[
-          { label: 'Approved Leave', color: getLeaveTypeColor('ANNUAL') },
-          { label: 'Pending Leave', color: withAlpha(getLeaveTypeColor('ANNUAL'), 0.5) },
-          { label: 'Planned Leave', color: PLAN_COLOR },
+          { label: 'Approved Leave', color: '#16a34a' },
+          { label: 'Pending Leave', color: withAlpha('#d97706', 0.5) },
+          { label: 'Planned Leave', color: '#305669' },
+          { label: 'Public Holiday', color: 'rgba(200,32,61,0.10)' },
           { label: 'Today', color: '#9CA3AF' },
         ].map((l) => (
           <span key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: C.muted }}>

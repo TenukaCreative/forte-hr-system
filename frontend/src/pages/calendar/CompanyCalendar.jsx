@@ -23,7 +23,7 @@ function datesInRange(start, end) {
 }
 
 export default function CompanyCalendar() {
-  const { resolvedRole } = useAuth();
+const { hasPermission } = useAuth();
   const [leaves, setLeaves] = useState([]);
   const [outlookEvents, setOutlookEvents] = useState([]);
   const [holidays, setHolidays] = useState([]);
@@ -33,7 +33,7 @@ export default function CompanyCalendar() {
 
   useEffect(() => {
     // HR / Super Admin see everyone's approved leave; other roles only their own.
-    const isHr = resolvedRole === 'HR_MANAGER' || resolvedRole === 'SUPER_ADMIN';
+    const isHr = hasPermission('employee_management');
     api.get(isHr ? '/leaves/all' : '/leaves/my')
       .then((r) => setLeaves(r.data.filter((l) => l.status === 'APPROVED')))
       .catch(() => toast.error('Failed to load calendar'))

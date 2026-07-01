@@ -175,14 +175,20 @@ const submitRequest = async (req, res, next) => {
 
 // GET /api/leaves/my
 // Employee views their own requests
-const getMyRequests = async (req, res, next) => {
-  try {
+const getMyRequests = async(req,res,next) =>{
+  try{
     const requests = await LeaveRequest.findAll({
-      where: { employeeId: req.user.id },
+      where: {employeeId: req.user.id},
+      include: [{
+        model: User,
+        as: 'manager',
+        attributes: ['id', 'name'],
+      }],
       order: [['createdAt', 'DESC']],
     });
     res.json(requests);
-  } catch (err) {
+  }
+  catch(err){
     next(err);
   }
 };

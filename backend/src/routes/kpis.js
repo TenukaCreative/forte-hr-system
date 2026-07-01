@@ -9,7 +9,7 @@ const {
   getEmployeeKpis,
 } = require('../controllers/kpiController');
 const auth = require('../middleware/auth');
-const { authorize, authorizePermission } = require('../middleware/rbac');
+const { authorizePermission } = require('../middleware/rbac');
 
 const teamPerf = authorizePermission('team_performance');
 

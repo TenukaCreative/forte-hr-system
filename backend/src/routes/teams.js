@@ -10,7 +10,7 @@ const {
   removeMember,
 } = require('../controllers/teamController');
 const auth = require('../middleware/auth');
-const { authorize, authorizePermission } = require('../middleware/rbac');
+const { authorizePermission } = require('../middleware/rbac');
 
 const teamPerf = authorizePermission('team_performance');
 

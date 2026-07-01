@@ -55,8 +55,8 @@ export default function EmployeeDetailPage() {
   const { userId } = useParams();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
-  const { resolvedRole } = useAuth();
-  const canManageLeave = resolvedRole === 'HR_MANAGER' || resolvedRole === 'SUPER_ADMIN';
+  const { hasPermission } = useAuth();
+  const canManageLeave = hasPermission('employee_management');
 
   const [userData, setUserData] = useState(null);
   const [employee, setEmployee] = useState(null);
