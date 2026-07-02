@@ -13,6 +13,7 @@ const Team = require('./Team')(sequelize);
 const TeamMember = require('./TeamMember')(sequelize);
 const EthicsReview = require('./EthicsReview')(sequelize);
 const PerformanceSettings = require('./PerformanceSettings')(sequelize);
+const KPIEvaluation = require('./KPIEvaluation')(sequelize);
 const Role = require('./Role')(sequelize);
 const RolePermission = require('./RolePermission')(sequelize);
 const PublicHoliday = require('./PublicHoliday')(sequelize);
@@ -51,6 +52,11 @@ KPI.belongsTo(User, { foreignKey: 'assignedBy', as: 'assigner' });
 // KPI <-> Task
 KPI.hasMany(Task, { foreignKey: 'kpiId', as: 'tasks' });
 Task.belongsTo(KPI, { foreignKey: 'kpiId' });
+
+// KPI <-> KPIEvaluation
+KPI.hasOne(KPIEvaluation, { foreignKey: 'kpiId', as: 'evaluation' });
+KPIEvaluation.belongsTo(KPI, { foreignKey: 'kpiId' });
+KPIEvaluation.belongsTo(User, { foreignKey: 'reviewedBy', as: 'reviewer' });
 
 // Team <-> KPI
 KPI.belongsTo(Team, { foreignKey: 'teamId', as: 'team' });
@@ -106,6 +112,7 @@ module.exports = {
   TeamMember,
   EthicsReview,
   PerformanceSettings,
+  KPIEvaluation,
   Role,
   RolePermission,
   PublicHoliday,

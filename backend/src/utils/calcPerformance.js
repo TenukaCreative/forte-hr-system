@@ -1,4 +1,4 @@
-const { KPI, Task, EthicsReview, PerformanceSettings } = require('../models');
+const { KPI, Task, EthicsReview, PerformanceSettings, KPIEvaluation } = require('../models');
 
 const calcPerformance = async (employeeId) => {
   // Get performance weights (latest saved, or 50/50 default)
@@ -11,8 +11,11 @@ const calcPerformance = async (employeeId) => {
 
   // Get KPIs with tasks
   const kpis = await KPI.findAll({
-    where: { employeeId, status: 'ACTIVE' },
-    include: [{ model: Task, as: 'tasks' }],
+    where: { employeeId, status: ['ACTIVE', 'PENDING_REVIEW', 'CLOSED'] },
+    include: [
+      { model: Task, as: 'tasks' },
+      { model: KPIEvaluation, as: 'evaluation' },
+    ],
   });
 
   const kpiResults = kpis.map((kpi) => {
@@ -20,9 +23,11 @@ const calcPerformance = async (employeeId) => {
     const totalTasks = tasks.length;
     const completedTasks = tasks.filter((t) => t.status === 'COMPLETED').length;
     const targetScore = parseFloat(kpi.targetScore);
-    const earnedScore = totalTasks > 0
-      ? (completedTasks / totalTasks) * targetScore
-      : 0;
+    const earnedScore = kpi.evaluation?.managerRating
+      ? (parseFloat(kpi.evaluation.managerRating) / 5) * targetScore
+      : totalTasks > 0
+        ? (completedTasks / totalTasks) * targetScore
+        : 0;
     return {
       id: kpi.id,
       title: kpi.title,
@@ -33,11 +38,18 @@ const calcPerformance = async (employeeId) => {
       totalTasks,
       completedTasks,
       status: kpi.status,
+      evaluation: kpi.evaluation ? {
+        selfRating: kpi.evaluation.selfRating,
+        selfComment: kpi.evaluation.selfComment,
+        managerRating: kpi.evaluation.managerRating,
+        managerComment: kpi.evaluation.managerComment,
+      } : null,
     };
   });
 
-  const kpiScore = kpiResults.length > 0
-    ? kpiResults.reduce((sum, k) => sum + k.earnedScore, 0) / kpiResults.length
+  const totalWeight = kpiResults.reduce((sum, k) => sum + k.targetScore, 0);
+  const kpiScorePercent = totalWeight > 0
+    ? (kpiResults.reduce((sum, k) => sum + k.earnedScore, 0) / totalWeight) * 100
     : 0;
 
   // Get latest ethics review
@@ -50,12 +62,12 @@ const calcPerformance = async (employeeId) => {
 
   // Combined final score
   const finalScore = parseFloat((
-    (kpiScore * kpiWeight) + (ethicsScore * ethicsWeight)
+    (kpiScorePercent * kpiWeight) + (ethicsScore * ethicsWeight)
   ).toFixed(2));
 
   return {
     finalScore,
-    kpiScore: parseFloat(kpiScore.toFixed(2)),
+    kpiScore: parseFloat(kpiScorePercent.toFixed(2)),
     ethicsScore,
     kpiWeight: kpiWeight * 100,
     ethicsWeight: ethicsWeight * 100,

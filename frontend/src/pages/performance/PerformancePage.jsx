@@ -55,10 +55,14 @@ export default function PerformancePage() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState({});
+  const [evalModal, setEvalModal] = useState(null); // kpi object or null
+  const [selfRating, setSelfRating] = useState(5);
+  const [selfComment, setSelfComment] = useState('');
+  const [submittingEval, setSubmittingEval] = useState(false);
 
   const load = () =>
-    Promise.all([api.get('/dashboard/me'), api.get('/tasks/my')])
-      .then(([d, t]) => { setPerf(d.data?.performance || null); setTasks(t.data || []); })
+    Promise.all([api.get('/performance/me'), api.get('/tasks/my')])
+      .then(([p, t]) => { setPerf(p.data || null); setTasks(t.data || []); })
       .catch(() => toast.error('Failed to load performance'));
 
   useEffect(() => { load().finally(() => setLoading(false)); }, []);
@@ -70,6 +74,26 @@ export default function PerformancePage() {
       load();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to complete task');
+    }
+  };
+
+  const submitSelfEvaluation = async () => {
+    if (!evalModal) return;
+    setSubmittingEval(true);
+    try {
+      await api.post(`/kpis/${evalModal.id}/self-evaluate`, {
+        selfRating,
+        selfComment,
+      });
+      toast.success('Self evaluation submitted — awaiting manager review');
+      setEvalModal(null);
+      setSelfRating(5);
+      setSelfComment('');
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to submit evaluation');
+    } finally {
+      setSubmittingEval(false);
     }
   };
 
@@ -184,6 +208,45 @@ export default function PerformancePage() {
                           {open ? <ChevronDown size={15} /> : <ChevronRight size={15} />} {kpi.completedTasks}/{kpi.totalTasks} tasks
                         </button>
                       )}
+                      {/* Self evaluation button or status */}
+                      {kpi.status === 'ACTIVE' && kpi.completedTasks === kpi.totalTasks && kpi.totalTasks > 0 && (
+                        <button
+                          onClick={() => { setEvalModal(kpi); setSelfRating(5); setSelfComment(''); }}
+                          style={{
+                            marginTop: 10, padding: '8px 14px',
+                            background: C.accent, color: '#fff',
+                            border: 'none', borderRadius: 8,
+                            fontSize: 13, fontWeight: 600,
+                            cursor: 'pointer', fontFamily: 'inherit',
+                          }}
+                        >
+                          Close KPI & Self Evaluate
+                        </button>
+                      )}
+                      {kpi.status === 'PENDING_REVIEW' && (
+                        <div style={{
+                          marginTop: 10, padding: '8px 14px',
+                          background: '#FEF3C7', color: '#D97706',
+                          borderRadius: 8, fontSize: 13, fontWeight: 600,
+                          display: 'inline-block',
+                        }}>
+                          Awaiting Manager Review
+                        </div>
+                      )}
+                      {kpi.status === 'CLOSED' && kpi.evaluation?.managerRating && (
+                        <div style={{
+                          marginTop: 10, padding: '10px 14px',
+                          background: '#DCFCE7', borderRadius: 8,
+                          fontSize: 13, color: '#16a34a', fontWeight: 600,
+                        }}>
+                          Manager Rating: {kpi.evaluation.managerRating}/5
+                          {kpi.evaluation.managerComment && (
+                            <p style={{ margin: '4px 0 0', fontSize: 12, fontWeight: 400, color: C.muted, fontStyle: 'italic' }}>
+                              "{kpi.evaluation.managerComment}"
+                            </p>
+                          )}
+                        </div>
+                      )}
                       {open && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
                           {kpiTasks.map((t) => {
@@ -271,6 +334,106 @@ export default function PerformancePage() {
       )}
 
       <style>{`@media(max-width:860px){.pf-stats{grid-template-columns:1fr!important}.pf-main{grid-template-columns:1fr!important}.pf-ethics{grid-template-columns:1fr!important}}`}</style>
+
+      {evalModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000, padding: 24,
+        }}
+          onClick={() => setEvalModal(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#fff', borderRadius: 16, padding: 28,
+              width: '100%', maxWidth: 480,
+              boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+            }}
+          >
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: C.dark, margin: '0 0 6px' }}>
+              Self Evaluation
+            </h3>
+            <p style={{ fontSize: 13, color: C.muted, margin: '0 0 20px' }}>
+              {evalModal.title}
+            </p>
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: C.muted, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: 10 }}>
+                Your Rating
+              </label>
+              <div style={{ display: 'flex', gap: 10 }}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setSelfRating(n)}
+                    style={{
+                      width: 48, height: 48,
+                      borderRadius: 10,
+                      border: `2px solid ${selfRating === n ? C.accent : C.border}`,
+                      background: selfRating === n ? C.accent : '#fff',
+                      color: selfRating === n ? '#fff' : C.dark,
+                      fontSize: 18, fontWeight: 700,
+                      cursor: 'pointer', fontFamily: 'inherit',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: C.muted, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
+                Comment (optional)
+              </label>
+              <textarea
+                value={selfComment}
+                onChange={(e) => setSelfComment(e.target.value)}
+                placeholder="Describe your work, challenges faced, and achievements..."
+                style={{
+                  width: '100%', minHeight: 100, padding: '10px 12px',
+                  border: `1.5px solid ${C.border}`, borderRadius: 8,
+                  fontSize: 14, fontFamily: 'inherit', color: C.dark,
+                  background: '#FAFAF7', resize: 'vertical',
+                  outline: 'none', boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={submitSelfEvaluation}
+                disabled={submittingEval}
+                style={{
+                  flex: 1, padding: '12px 16px',
+                  background: C.accent, color: '#fff',
+                  border: 'none', borderRadius: 8,
+                  fontSize: 14, fontWeight: 600,
+                  cursor: submittingEval ? 'not-allowed' : 'pointer',
+                  fontFamily: 'inherit',
+                  opacity: submittingEval ? 0.6 : 1,
+                }}
+              >
+                {submittingEval ? 'Submitting...' : 'Submit Evaluation'}
+              </button>
+              <button
+                onClick={() => setEvalModal(null)}
+                style={{
+                  padding: '12px 16px',
+                  background: '#fff', color: C.dark,
+                  border: `1.5px solid ${C.border}`, borderRadius: 8,
+                  fontSize: 14, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Shell>
   );
 }
