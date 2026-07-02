@@ -6,7 +6,7 @@ const { authorizePermission } = require('../middleware/rbac');
 
 router.get('/', auth, authorizePermission('employee_management'), getEmployees);
 // Specific route must come before the dynamic /:userId route
-router.get('/users', auth, authorizePermission('employee_management'), getAllUsers);
+router.get('/users', auth, authorizePermission('employee_management','team_performance'), getAllUsers);
 
 // Self-service profile routes — any authenticated user, own record only.
 // Declared before the dynamic /:userId routes so 'profile'/'profile-status'

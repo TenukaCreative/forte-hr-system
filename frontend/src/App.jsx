@@ -23,7 +23,6 @@ import LeavePage from './pages/leave/LeavePage';
 
 // Performance + PMO
 import PerformancePage from './pages/performance/PerformancePage';
-import SeniorPerformancePage from './pages/performance/SeniorPerformancePage';
 import TeamPage from './pages/pmo/TeamPage';
 
 // Calendar
@@ -140,14 +139,6 @@ const PermissionRoute = ({ permission, children }) => {
   return children;
 };
 
-function PerformanceRouter() {
-  const { hasPermission } = useAuth();
-  if (hasPermission('team_performance')) {
-    return <SeniorPerformancePage />;
-  }
-  return <PerformancePage />;
-}
-
 function DashboardRouter() {
   const { hasPermission } = useAuth();
   if (hasPermission('team_performance')) {
@@ -186,7 +177,7 @@ export default function App() {
         element={
           <ProtectedRoute>
             <PermissionRoute permission="performance_evaluation">
-              <PerformanceRouter />
+              <PerformancePage />
             </PermissionRoute>
           </ProtectedRoute>
         }
