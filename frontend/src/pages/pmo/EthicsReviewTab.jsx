@@ -8,21 +8,20 @@ import { Spinner, EmptyState, Button, Badge } from '../../components/ui';
 const initials = (name) => name?.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase() || '?';
 
 const PERF_CRITERIA = [
-  { field: 'timeliness', label: 'Timeliness & Task Completion', weight: 20 },
-  { field: 'workQuality', label: 'Work Quality & Accuracy', weight: 20 },
-  { field: 'workDiscipline', label: 'Work Discipline & Availability', weight: 15 },
-  { field: 'ownership', label: 'Ownership & Accountability', weight: 15 },
-  { field: 'collaboration', label: 'Collaboration & Communication', weight: 10 },
-  { field: 'productOwnership', label: 'Product Ownership & Contribution', weight: 10 },
-  { field: 'businessDevelopment', label: 'Business Development Contribution', weight: 5 },
-  { field: 'learningImprovement', label: 'Learning & Improvement', weight: 5 },
+  { field: 'timeliness', label: 'Timeliness & Task Completion', weight: 16 },
+  { field: 'workQuality', label: 'Work Quality & Accuracy', weight: 16 },
+  { field: 'workDiscipline', label: 'Work Discipline & Availability', weight: 12 },
+  { field: 'ownership', label: 'Ownership & Accountability', weight: 12 },
+  { field: 'collaboration', label: 'Collaboration & Communication', weight: 8 },
+  { field: 'productOwnership', label: 'Product Ownership & Contribution', weight: 8 },
+  { field: 'businessDevelopment', label: 'Business Development Contribution', weight: 4 },
+  { field: 'learningImprovement', label: 'Learning & Improvement', weight: 4 },
 ];
 
 const BEHAV_CRITERIA = [
-  { field: 'behavioralMetrics', label: 'Behavioral Metrics', weight: 5 },
-  { field: 'attitude', label: 'Attitude', weight: 5 },
-  { field: 'effort', label: 'Effort', weight: 5 },
-  { field: 'trust', label: 'Trust', weight: 5 },
+  { field: 'attitude', label: 'Attitude', weight: 7 },
+  { field: 'effort', label: 'Effort', weight: 7 },
+  { field: 'trust', label: 'Trust', weight: 6 },
 ];
 
 const ALL_FIELDS = [...PERF_CRITERIA, ...BEHAV_CRITERIA].map((c) => c.field);
@@ -42,7 +41,7 @@ const getCurrentPeriod = () => {
 const getPeriodOptions = () => {
   const qs = ['Q1', 'Q2', 'Q3', 'Q4'];
   const yr = new Date().getFullYear();
-  return [...qs.map((q) => `${q}-${yr}`), ...qs.map((q) => `${q}-${yr + 1}`)];
+  return [...qs.map((q) => `${q}-${yr}`)];
 };
 
 function SliderRow({ criteria, value, onChange }) {

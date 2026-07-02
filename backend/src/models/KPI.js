@@ -42,9 +42,13 @@ module.exports = (sequelize) => {
     targetScore: {
       type: DataTypes.DECIMAL(5, 2),
       allowNull: false,
+      validate: {
+        min: 1,
+        max: 5,
+      },
     },
     status: {
-      type: DataTypes.ENUM('ACTIVE', 'CLOSED'),
+      type: DataTypes.ENUM('ACTIVE', 'PENDING_REVIEW', 'CLOSED'),
       defaultValue: 'ACTIVE',
     },
   }, {
