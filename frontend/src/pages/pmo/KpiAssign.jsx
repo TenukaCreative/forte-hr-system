@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { Plus, ChevronDown, ChevronRight, Target, ListPlus, Trash2, Users2 } from 'lucide-react';
+import { Plus, ChevronDown, ChevronRight, Target, ListPlus, Trash2, Users2, Pencil } from 'lucide-react';
 import api from '../../api/axios';
 import { C, card, inputStyle, fieldLabel, formatDate, isOverdue } from '../../components/theme';
 import { Spinner, EmptyState, Button, Badge, KpiDates } from '../../components/ui';
@@ -25,6 +25,7 @@ export default function KpiAssign() {
   const [kpiForm, setKpiForm] = useState(null);
   const [expanded, setExpanded] = useState({});
   const [taskForm, setTaskForm] = useState(null);    // { kpiId, title, description, deadline }
+  const [editingKpi, setEditingKpi] = useState(null); // null = create mode, KPI object = edit mode
 
   // Initial load: teams + user→employee map
   useEffect(() => {
@@ -64,24 +65,57 @@ export default function KpiAssign() {
   const memberKpis = member ? kpis.filter((k) => k.Employee?.User?.id === member.id) : [];
 
   const startAssign = () => {
+    setEditingKpi(null);
     setKpiForm({ title: '', description: '', startDate: '', endDate: '', targetScore: 100 });
     setShowKpiForm(true);
   };
 
+  const startEdit = (kpi) => {
+    setEditingKpi(kpi);
+    setKpiForm({
+      title: kpi.title || '',
+      description: kpi.description || '',
+      startDate: kpi.startDate || '',
+      endDate: kpi.endDate || '',
+      targetScore: kpi.targetScore ?? 100,
+      status: kpi.status || 'ACTIVE',
+    });
+    setShowKpiForm(true);
+  };
+
+  const cancelForm = () => {
+    setShowKpiForm(false);
+    setEditingKpi(null);
+    setKpiForm(null);
+  };
+
   const submitKpi = async (e) => {
     e.preventDefault();
-    const employeeId = usersById[member?.id]?.employee?.id;
-    if (!employeeId) return toast.error('This member has no employee record. Ask HR to create one first.');
     if (!kpiForm.title.trim()) return toast.error('Title is required');
     if (!kpiForm.startDate || !kpiForm.endDate) return toast.error('Start date and ETA are required');
     if (kpiForm.endDate < kpiForm.startDate) return toast.error('End date must be after start date');
     try {
-      await api.post('/kpis', { employeeId, teamId, ...kpiForm });
-      toast.success('KPI assigned');
+      if (editingKpi) {
+        await api.put(`/kpis/${editingKpi.id}`, {
+          title: kpiForm.title,
+          description: kpiForm.description,
+          startDate: kpiForm.startDate,
+          endDate: kpiForm.endDate,
+          targetScore: kpiForm.targetScore,
+          status: kpiForm.status,
+        });
+        toast.success('KPI updated');
+      } else {
+        const employeeId = usersById[member?.id]?.employee?.id;
+        if (!employeeId) return toast.error('This member has no employee record. Ask HR to create one first.');
+        await api.post('/kpis', { employeeId, teamId, ...kpiForm });
+        toast.success('KPI assigned');
+      }
       setShowKpiForm(false);
+      setEditingKpi(null);
       loadTeamKpis(teamId);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to assign KPI');
+      toast.error(err.response?.data?.message || (editingKpi ? 'Failed to update KPI' : 'Failed to assign KPI'));
     }
   };
 
@@ -198,8 +232,11 @@ export default function KpiAssign() {
 
                 {showKpiForm && (
                   <form onSubmit={submitKpi} style={{ ...card, marginBottom: 16 }}>
+                    <h4 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 600, color: C.dark }}>
+                      {editingKpi ? 'Edit KPI' : 'Assign New KPI'}
+                    </h4>
                     <div style={{ background: '#FAFAF7', borderRadius: 8, padding: '8px 12px', marginBottom: 14, fontSize: 13, color: C.muted }}>
-                      Assigning to: <strong style={{ color: C.dark }}>{member.name}</strong> · <strong style={{ color: C.dark }}>{team.name}</strong>
+                      {editingKpi ? 'Editing for' : 'Assigning to'}: <strong style={{ color: C.dark }}>{member.name}</strong> · <strong style={{ color: C.dark }}>{team.name}</strong>
                     </div>
                     <label style={fieldLabel}>Title</label>
                     <input style={{ ...inputStyle, marginBottom: 12 }} value={kpiForm.title} autoFocus
@@ -214,16 +251,26 @@ export default function KpiAssign() {
                         endDate={kpiForm.endDate}
                         onStartChange={(val) => setKpiForm({ ...kpiForm, startDate: val, endDate: kpiForm.endDate && kpiForm.endDate < val ? '' : kpiForm.endDate })}
                         onEndChange={(val) => setKpiForm({ ...kpiForm, endDate: val })}
-                        minDate={todayISO()}
+                        minDate={editingKpi ? undefined : todayISO()}
                       />
                     </div>
                     <div style={{ marginBottom: 14 }}>
                       <label style={fieldLabel}>Target Score</label>
                       <input type="number" style={inputStyle} value={kpiForm.targetScore} onChange={(e) => setKpiForm({ ...kpiForm, targetScore: Number(e.target.value) })} />
                     </div>
+                    {editingKpi && (
+                      <div style={{ marginBottom: 14 }}>
+                        <label style={fieldLabel}>Status</label>
+                        <select style={inputStyle} value={kpiForm.status} onChange={(e) => setKpiForm({ ...kpiForm, status: e.target.value })}>
+                          <option value="ACTIVE">ACTIVE</option>
+                          <option value="COMPLETED">COMPLETED</option>
+                          <option value="CLOSED">CLOSED</option>
+                        </select>
+                      </div>
+                    )}
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <Button type="submit">Assign KPI</Button>
-                      <Button type="button" variant="ghost" onClick={() => setShowKpiForm(false)}>Cancel</Button>
+                      <Button type="submit">{editingKpi ? 'Save Changes' : 'Assign KPI'}</Button>
+                      <Button type="button" variant="ghost" onClick={cancelForm}>Cancel</Button>
                     </div>
                   </form>
                 )}
@@ -252,7 +299,10 @@ export default function KpiAssign() {
                                 </span>
                               </div>
                             </div>
-                            <button onClick={() => deleteKpi(kpi.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: C.red, padding: 4 }} title="Delete KPI"><Trash2 size={16} /></button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+                              <button onClick={() => startEdit(kpi)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: C.amber, padding: 4 }} title="Edit KPI"><Pencil size={16} /></button>
+                              <button onClick={() => deleteKpi(kpi.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: C.red, padding: 4 }} title="Delete KPI"><Trash2 size={16} /></button>
+                            </div>
                           </div>
 
                           <button onClick={() => setExpanded({ ...expanded, [kpi.id]: !open })}

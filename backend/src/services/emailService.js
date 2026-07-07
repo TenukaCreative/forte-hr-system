@@ -182,6 +182,7 @@ const templates = {
 };
 
 module.exports = {
+  wrap,
   sendEmail,
   templates,
   sendLeaveSubmittedEmail,
