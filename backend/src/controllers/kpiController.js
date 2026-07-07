@@ -1,4 +1,4 @@
-const { KPI, Task, Employee, User, Team, Notification, KPIEvaluation } = require('../models');
+const { KPI, Employee, User, Team, Notification, KPIEvaluation } = require('../models');
 const { notifyKpiAssigned, notifyKpiDeleted, notifyKpiUpdated } = require('../services/notificationService');
 
 // GET /api/kpis/my-team — every KPI this PMO has assigned, with member + tasks
@@ -13,7 +13,6 @@ const getMyTeamKpis = async (req, res, next) => {
           include: [{ model: User, attributes: ['id', 'name', 'jobTitle'] }],
         },
         { model: Team, as: 'team', attributes: ['id', 'name'] },
-        { model: Task, as: 'tasks' },
       ],
       order: [['createdAt', 'DESC']],
     });
@@ -37,7 +36,6 @@ const getKPIsByTeam = async (req, res, next) => {
           include: [{ model: User, attributes: ['id', 'name', 'jobTitle'] }],
         },
         { model: Team, as: 'team', attributes: ['id', 'name'] },
-        { model: Task, as: 'tasks' },
       ],
       order: [['createdAt', 'DESC']],
     });
@@ -127,7 +125,6 @@ const deleteKpi = async (req, res, next) => {
     if (!kpi) return res.status(404).json({ message: 'KPI not found' });
 
     const employee = kpi.Employee;
-    await Task.destroy({ where: { kpiId: kpi.id } });
     await kpi.destroy();
     await notifyKpiDeleted(employee,kpi);
     res.json({ message: 'KPI deleted' });
@@ -142,7 +139,6 @@ const getEmployeeKpis = async (req, res, next) => {
   try {
     const kpis = await KPI.findAll({
       where: { employeeId: req.params.employeeId, assignedBy: req.user.id },
-      include: [{ model: Task, as: 'tasks' }],
       order: [['createdAt', 'DESC']],
     });
 
@@ -165,7 +161,6 @@ const submitSelfEvaluation = async (req, res, next) => {
     const kpi = await KPI.findOne({
       where: { id: req.params.kpiId },
       include: [
-        { model: Task, as: 'tasks' },
         {
           model: Employee,
           attributes: ['id'],
@@ -177,14 +172,6 @@ const submitSelfEvaluation = async (req, res, next) => {
     if (!kpi) return res.status(404).json({ message: 'KPI not found' });
     if (kpi.status !== 'ACTIVE') {
       return res.status(400).json({ message: 'KPI is not active' });
-    }
-
-    // All tasks must be completed
-    const incompleteTasks = (kpi.tasks || []).filter((t) => t.status !== 'COMPLETED');
-    if (incompleteTasks.length > 0) {
-      return res.status(400).json({
-        message: `${incompleteTasks.length} task(s) still incomplete`
-      });
     }
 
     // Create or update evaluation
@@ -282,7 +269,6 @@ const getPendingEvaluations = async (req, res, next) => {
           include: [{ model: User, attributes: ['id', 'name', 'email'] }],
         },
         { model: Team, as: 'team', attributes: ['id', 'name'] },
-        { model: Task, as: 'tasks' },
         { model: KPIEvaluation, as: 'evaluation' },
       ],
       order: [['updatedAt', 'DESC']],

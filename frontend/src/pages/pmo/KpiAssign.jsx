@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { Plus, ChevronDown, ChevronRight, Target, ListPlus, Trash2, Users2, Pencil } from 'lucide-react';
+import { Plus, Target, Trash2, Users2, Pencil } from 'lucide-react';
 import api from '../../api/axios';
 import { C, card, inputStyle, fieldLabel, formatDate, isOverdue } from '../../components/theme';
 import { Spinner, EmptyState, Button, Badge, KpiDates } from '../../components/ui';
-import { RangeDatePicker, SingleDatePicker } from '../../components/DatePicker';
+import { RangeDatePicker } from '../../components/DatePicker';
 
 const todayISO = () => new Date().toISOString().split('T')[0];
 
@@ -23,8 +23,6 @@ export default function KpiAssign() {
   const [member, setMember] = useState(null);        // selected member { id (userId), name, role }
   const [showKpiForm, setShowKpiForm] = useState(false);
   const [kpiForm, setKpiForm] = useState(null);
-  const [expanded, setExpanded] = useState({});
-  const [taskForm, setTaskForm] = useState(null);    // { kpiId, title, description, deadline }
   const [editingKpi, setEditingKpi] = useState(null); // null = create mode, KPI object = edit mode
 
   // Initial load: teams + user→employee map
@@ -48,7 +46,6 @@ export default function KpiAssign() {
     setTeamId(id);
     setMember(null);
     setShowKpiForm(false);
-    setTaskForm(null);
     setLoadingTeam(true);
     try {
       const [t] = await Promise.all([api.get(`/teams/${id}`), loadTeamKpis(id)]);
@@ -66,7 +63,7 @@ export default function KpiAssign() {
 
   const startAssign = () => {
     setEditingKpi(null);
-    setKpiForm({ title: '', description: '', startDate: '', endDate: '', targetScore: 100 });
+    setKpiForm({ title: '', description: '', startDate: '', endDate: '', targetScore: 3 });
     setShowKpiForm(true);
   };
 
@@ -120,27 +117,13 @@ export default function KpiAssign() {
   };
 
   const deleteKpi = async (id) => {
-    if (!window.confirm('Delete this KPI and all its tasks?')) return;
+    if (!window.confirm('Delete this KPI?')) return;
     try {
       await api.delete(`/kpis/${id}`);
       toast.success('KPI deleted');
       loadTeamKpis(teamId);
     } catch {
       toast.error('Failed to delete KPI');
-    }
-  };
-
-  const submitTask = async (e) => {
-    e.preventDefault();
-    if (!taskForm.title.trim()) return toast.error('Task title is required');
-    if (!taskForm.deadline) return toast.error('Deadline is required');
-    try {
-      await api.post('/tasks', { kpiId: taskForm.kpiId, title: taskForm.title, description: taskForm.description, deadline: taskForm.deadline });
-      toast.success('Task added');
-      setTaskForm(null);
-      loadTeamKpis(teamId);
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to add task');
     }
   };
 
@@ -192,7 +175,7 @@ export default function KpiAssign() {
                 {team.members.map((m) => {
                   const active = member?.id === m.id;
                   return (
-                    <button key={m.id} className="km-row" onClick={() => { setMember(m); setShowKpiForm(false); setTaskForm(null); }}
+                    <button key={m.id} className="km-row" onClick={() => { setMember(m); setShowKpiForm(false); }}
                       style={{
                         width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12,
                         padding: '12px 16px', cursor: 'pointer', fontFamily: 'inherit',
@@ -256,14 +239,20 @@ export default function KpiAssign() {
                     </div>
                     <div style={{ marginBottom: 14 }}>
                       <label style={fieldLabel}>Target Score</label>
-                      <input type="number" style={inputStyle} value={kpiForm.targetScore} onChange={(e) => setKpiForm({ ...kpiForm, targetScore: Number(e.target.value) })} />
+                      <select style={inputStyle} value={kpiForm.targetScore} onChange={(e) => setKpiForm({ ...kpiForm, targetScore: Number(e.target.value) })}>
+                        <option value={1}>1</option>
+                        <option value={2}>2</option>
+                        <option value={3}>3</option>
+                        <option value={4}>4</option>
+                        <option value={5}>5</option>
+                      </select>
                     </div>
                     {editingKpi && (
                       <div style={{ marginBottom: 14 }}>
                         <label style={fieldLabel}>Status</label>
                         <select style={inputStyle} value={kpiForm.status} onChange={(e) => setKpiForm({ ...kpiForm, status: e.target.value })}>
                           <option value="ACTIVE">ACTIVE</option>
-                          <option value="COMPLETED">COMPLETED</option>
+                          <option value="PENDING_REVIEW">PENDING_REVIEW</option>
                           <option value="CLOSED">CLOSED</option>
                         </select>
                       </div>
@@ -281,9 +270,6 @@ export default function KpiAssign() {
                   <div>
                     <style>{`.kpi-card{transition:border-color 0.15s}.kpi-card:hover{border-color:#C8203D}`}</style>
                     {memberKpis.map((kpi) => {
-                      const tasks = kpi.tasks || [];
-                      const done = tasks.filter((t) => t.status === 'COMPLETED').length;
-                      const open = expanded[kpi.id];
                       return (
                         <div key={kpi.id} className="kpi-card" style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 12 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
@@ -295,7 +281,7 @@ export default function KpiAssign() {
                               <div style={{ margin: '6px 0 0', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                                 <KpiDates startDate={kpi.startDate} endDate={kpi.endDate} />
                                 <span style={{ fontSize: 12, color: C.muted }}>
-                                  · Target {kpi.targetScore} · {tasks.length} task{tasks.length !== 1 ? 's' : ''} ({done} done)
+                                  · Target {kpi.targetScore}
                                 </span>
                               </div>
                             </div>
@@ -304,61 +290,6 @@ export default function KpiAssign() {
                               <button onClick={() => deleteKpi(kpi.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: C.red, padding: 4 }} title="Delete KPI"><Trash2 size={16} /></button>
                             </div>
                           </div>
-
-                          <button onClick={() => setExpanded({ ...expanded, [kpi.id]: !open })}
-                            style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 12, background: 'transparent', border: 'none', cursor: 'pointer', color: C.muted, fontSize: 13, fontWeight: 500, fontFamily: 'inherit', padding: 0 }}>
-                            {open ? <ChevronDown size={15} /> : <ChevronRight size={15} />} {open ? 'Hide' : 'Show'} tasks
-                          </button>
-
-                          {open && (
-                            <div style={{ marginTop: 10 }}>
-                              {tasks.length === 0 ? (
-                                <p style={{ fontSize: 13, color: C.faint, margin: '0 0 10px' }}>No tasks under this KPI yet.</p>
-                              ) : (
-                                <div style={{ marginBottom: 10 }}>
-                                  {tasks.map((t) => {
-                                    const overdue = isOverdue(t.deadline, t.status);
-                                    const leftColor = overdue ? C.red : t.status === 'COMPLETED' ? C.green : C.border;
-                                    return (
-                                      <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '8px 12px', borderLeft: `3px solid ${leftColor}`, margin: '4px 0', fontSize: 13 }}>
-                                        <div style={{ minWidth: 0 }}>
-                                          <span style={{ fontWeight: 500, color: C.dark }}>{t.title}</span>
-                                          {t.deadline && <span style={{ color: overdue ? C.red : C.muted, marginLeft: 8 }}>· {overdue ? 'overdue ' : 'due '}{formatDate(t.deadline)}</span>}
-                                        </div>
-                                        <Badge status={overdue ? 'OVERDUE' : t.status} />
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-
-                              {taskForm?.kpiId === kpi.id ? (
-                                <form onSubmit={submitTask} style={{ padding: 14, background: '#FAFAF7', borderRadius: 8 }}>
-                                  <input style={{ ...inputStyle, marginBottom: 10 }} value={taskForm.title} autoFocus
-                                    onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} placeholder="Task title" />
-                                  <textarea style={{ ...inputStyle, marginBottom: 10, minHeight: 48, resize: 'vertical' }} value={taskForm.description}
-                                    onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })} placeholder="Description (optional)" />
-                                  <label style={fieldLabel}>Deadline</label>
-                                  <div style={{ marginBottom: 12 }}>
-                                    <SingleDatePicker
-                                      value={taskForm.deadline}
-                                      onChange={(val) => setTaskForm({ ...taskForm, deadline: val })}
-                                      placeholder="Select deadline"
-                                    />
-                                  </div>
-                                  <div style={{ display: 'flex', gap: 8 }}>
-                                    <Button type="submit">Add Task</Button>
-                                    <Button type="button" variant="ghost" onClick={() => setTaskForm(null)}>Cancel</Button>
-                                  </div>
-                                </form>
-                              ) : (
-                                <button onClick={() => setTaskForm({ kpiId: kpi.id, title: '', description: '', deadline: '' })}
-                                  style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', cursor: 'pointer', color: C.accent, fontSize: 13, fontWeight: 600, fontFamily: 'inherit', padding: 0 }}>
-                                  <ListPlus size={15} /> Add Task
-                                </button>
-                              )}
-                            </div>
-                          )}
                         </div>
                       );
                     })}

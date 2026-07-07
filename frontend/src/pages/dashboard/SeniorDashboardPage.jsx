@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import Shell from '../../components/layout/Shell';
-import { C, card, scoreColor, formatDate, isOverdue } from '../../components/theme';
+import { C, card, scoreColor, formatDate } from '../../components/theme';
 import { StatCard, Spinner, EmptyState, Badge, Button } from '../../components/ui';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
@@ -54,8 +54,6 @@ export default function SeniorDashboardPage() {
   const [pendingLeaves, setPendingLeaves] = useState([]);
   const [onLeaveToday, setOnLeaveToday] = useState([]);
   const [notifications, setNotifications] = useState([]);
-  const [kpis, setKpis] = useState([]);
-  const [overdueTasks, setOverdueTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [approvingId, setApprovingId] = useState(null);
 
@@ -68,16 +66,12 @@ export default function SeniorDashboardPage() {
       api.get('/dashboard/me'),
       api.get(pendingEndpoint),
       api.get('/notifications/me'),
-      api.get('/kpis/my-team'),
-      api.get('/tasks/overdue'),
       api.get(todayEndpoint),
     ])
-      .then(([d, p, n, k, o, t]) => {
+      .then(([d, p, n, t]) => {
         setDashData(d.data);
         setPendingLeaves(p.data || []);
         setNotifications(n.data || []);
-        setKpis(k.data || []);
-        setOverdueTasks(o.data || []);
         setOnLeaveToday(
           (t.data || []).filter(
             (l) => l.status === 'APPROVED' && l.startDate <= todayStr && l.endDate >= todayStr
@@ -115,22 +109,7 @@ export default function SeniorDashboardPage() {
 
   const unread = notifications.filter((n) => !n.isRead).length;
 
-  const allTasks = kpis.flatMap((kpi) =>
-    (kpi.tasks || kpi.Tasks || []).map((t) => ({
-      ...t,
-      employeeName: kpi.Employee?.User?.name || 'Unknown',
-      kpiTitle: kpi.title,
-    }))
-  );
-
-  const totalTasks = allTasks.length;
-  const completedTasks = allTasks.filter((t) => t.status === 'COMPLETED').length;
-
   const recentNotifs = notifications.slice(0, 5);
-
-  const sortedTasks = [...allTasks]
-    .sort((a, b) => new Date(a.deadline) - new Date(b.deadline))
-    .slice(0, 5);
 
   return (
     <Shell>
@@ -152,8 +131,8 @@ export default function SeniorDashboardPage() {
         </span>
       </div>
 
-      {/* Section 2 — 4 stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 20, marginBottom: 24 }} className="pmo-dash-stats">
+      {/* Section 2 — 3 stat cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 20, marginBottom: 24 }} className="pmo-dash-stats">
         <StatCard
           label="MANAGEMENT SCORE"
           value={mgmtScore}
@@ -167,12 +146,6 @@ export default function SeniorDashboardPage() {
           sub="leave requests awaiting"
         />
         <StatCard
-          label="OVERDUE TASKS"
-          value={overdueTasks.length}
-          color={overdueTasks.length > 0 ? C.red : 'rgba(21,22,26,0.3)'}
-          sub="tasks past deadline"
-        />
-        <StatCard
           label="NOTIFICATIONS"
           value={unread}
           color={unread > 0 ? C.accent : 'rgba(21,22,26,0.3)'}
@@ -184,65 +157,6 @@ export default function SeniorDashboardPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 24, marginBottom: 24, alignItems: 'start' }} className="pmo-dash-main">
         {/* LEFT COLUMN */}
         <div>
-          {/* Card A — Team Tasks */}
-          <div style={{ ...card, marginBottom: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 600, color: C.dark, margin: 0 }}>Team Tasks</h3>
-              <span style={{ fontSize: 13, color: C.muted }}>{completedTasks}/{totalTasks} done</span>
-            </div>
-
-            <div style={{ height: 8, background: C.border, borderRadius: 6, overflow: 'hidden', marginBottom: 20 }}>
-              <div style={{
-                height: '100%',
-                width: `${totalTasks ? (completedTasks / totalTasks * 100) : 0}%`,
-                background: C.green,
-                borderRadius: 6,
-                transition: 'width 0.4s',
-              }} />
-            </div>
-
-            {sortedTasks.map((t, i) => {
-              const overdue = isOverdue(t.deadline, t.status);
-              return (
-                <div key={t.id} style={{
-                  display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0',
-                  borderBottom: i < 4 ? `1px solid ${C.border}` : 'none',
-                }}>
-                  <div style={{
-                    width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-                    background: t.status === 'COMPLETED' ? C.green : overdue ? C.red : C.amber,
-                  }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: C.dark, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {t.title}
-                    </p>
-                    <p style={{ margin: 0, fontSize: 12, color: C.muted }}>
-                      {t.employeeName} · {formatDate(t.deadline)}
-                    </p>
-                  </div>
-                  <Badge status={overdue ? 'OVERDUE' : t.status} />
-                </div>
-              );
-            })}
-
-            {allTasks.length === 0 && (
-              <EmptyState
-                title="No tasks assigned yet"
-                subtitle="Assign KPIs and tasks from Team Performance"
-              />
-            )}
-
-            {allTasks.length > 5 && (
-              <Button
-                variant="ghost"
-                style={{ width: '100%', marginTop: 14, justifyContent: 'center' }}
-                onClick={() => navigate('/team')}
-              >
-                View all {allTasks.length} tasks
-              </Button>
-            )}
-          </div>
-
           {/* Card B — On Leave Today */}
           <div style={card}>
             <h3 style={{ fontSize: 18, fontWeight: 600, color: C.dark, margin: '0 0 16px' }}>On Leave Today</h3>

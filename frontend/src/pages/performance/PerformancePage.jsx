@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { ChevronDown, ChevronRight, Target } from 'lucide-react';
+import { Target } from 'lucide-react';
 import Shell from '../../components/layout/Shell';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
-import TasksDuePanel from '../../components/TasksDuePanel';
-import WeeklyChart from '../../components/WeeklyChart';
-import { C, card, scoreColor, formatDate, isOverdue } from '../../components/theme';
-import { Spinner, EmptyState, Badge, KpiDates } from '../../components/ui';
+import { C, card, scoreColor } from '../../components/theme';
+import { Spinner, EmptyState, KpiDates } from '../../components/ui';
 
 const sectionHeading = { fontSize: 18, fontWeight: 600, color: C.dark, margin: '0 0 16px', letterSpacing: '-0.01em' };
 const statLabel = { fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: C.faint, margin: 0 };
@@ -52,30 +50,18 @@ function EthicsBar({ criteria, review }) {
 export default function PerformancePage() {
   const { user } = useAuth();
   const [perf, setPerf] = useState(null);
-  const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState({});
   const [evalModal, setEvalModal] = useState(null); // kpi object or null
   const [selfRating, setSelfRating] = useState(5);
   const [selfComment, setSelfComment] = useState('');
   const [submittingEval, setSubmittingEval] = useState(false);
 
   const load = () =>
-    Promise.all([api.get('/performance/me'), api.get('/tasks/my')])
-      .then(([p, t]) => { setPerf(p.data || null); setTasks(t.data || []); })
+    api.get('/performance/me')
+      .then((p) => { setPerf(p.data || null); })
       .catch(() => toast.error('Failed to load performance'));
 
   useEffect(() => { load().finally(() => setLoading(false)); }, []);
-
-  const completeTask = async (taskId) => {
-    try {
-      await api.patch(`/tasks/${taskId}/complete`);
-      toast.success('Task marked complete');
-      load();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to complete task');
-    }
-  };
 
   const submitSelfEvaluation = async () => {
     if (!evalModal) return;
@@ -100,20 +86,9 @@ export default function PerformancePage() {
   if (loading) return <Shell><Spinner /></Shell>;
 
   const overall = perf?.overallScore ?? 0;
-  const totalTasks = perf?.totalTasks ?? tasks.length;
-  const completedTasks = perf?.completedTasks ?? tasks.filter((t) => t.status === 'COMPLETED').length;
-  const overdueCount = tasks.filter((t) => isOverdue(t.deadline, t.status)).length;
-  const taskPct = totalTasks ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-  // Group tasks by KPI for the breakdown
-  const tasksByKpi = {};
-  tasks.forEach((t) => {
-    const id = t.KPI?.id || 'none';
-    (tasksByKpi[id] = tasksByKpi[id] || []).push(t);
-  });
 
   const showMgmt = user?.role === 'HEAD_OF_PMO' && perf?.managementScore != null;
-  const hasData = perf && (perf.kpis?.length || tasks.length || showMgmt);
+  const hasData = perf && perf.kpis?.length;
 
   return (
     <Shell>
@@ -129,7 +104,7 @@ export default function PerformancePage() {
       ) : (
         <>
           {/* Stat cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${showMgmt ? 4 : 3},1fr)`, gap: 20, marginBottom: 20 }} className="pf-stats">
+          <div style={{ display: 'grid', gridTemplateColumns: showMgmt ? 'repeat(2,1fr)' : '1fr', gap: 20, marginBottom: 20 }} className="pf-stats">
             {showMgmt && (
               <div style={card}>
                 <p style={statLabel}>Management Score</p>
@@ -149,20 +124,6 @@ export default function PerformancePage() {
               <p style={{ fontSize: 12, color: C.muted, margin: 0 }}>
                 KPI {perf?.kpiScore ?? 0} ({perf?.kpiWeight ?? 50}%) · Ethics {perf?.ethicsScore ?? 0} ({perf?.ethicsWeight ?? 50}%)
               </p>
-            </div>
-            <div style={card}>
-              <p style={statLabel}>Tasks</p>
-              <p style={{ fontSize: 42, fontWeight: 600, color: C.dark, margin: '10px 0 8px', lineHeight: 1, letterSpacing: '-0.02em' }}>
-                {completedTasks}<span style={{ fontSize: 20, fontWeight: 400, color: 'rgba(21,22,26,0.3)' }}>/{totalTasks}</span>
-              </p>
-              <div style={{ height: 6, background: '#E4E3DC', borderRadius: 4, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${taskPct}%`, background: C.accent, borderRadius: 4, transition: 'width 0.4s' }} />
-              </div>
-            </div>
-            <div style={card}>
-              <p style={statLabel}>Overdue</p>
-              <p style={{ fontSize: 42, fontWeight: 600, color: overdueCount > 0 ? C.red : 'rgba(21,22,26,0.3)', margin: '10px 0 4px', lineHeight: 1, letterSpacing: '-0.02em' }}>{overdueCount}</p>
-              <p style={{ fontSize: 13, color: C.muted, margin: 0 }}>task{overdueCount !== 1 ? 's' : ''} past deadline</p>
             </div>
           </div>
 
@@ -187,9 +148,6 @@ export default function PerformancePage() {
               <h3 style={sectionHeading}>KPI Breakdown</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {(perf?.kpis || []).map((kpi) => {
-                  const pct = kpi.totalTasks ? (kpi.completedTasks / kpi.totalTasks) * 100 : 0;
-                  const open = expanded[kpi.id];
-                  const kpiTasks = tasksByKpi[kpi.id] || [];
                   return (
                     <div key={kpi.id} style={{ paddingBottom: 14, borderBottom: '1px solid #E4E3DC' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, gap: 8 }}>
@@ -199,17 +157,8 @@ export default function PerformancePage() {
                         </div>
                         <span style={{ fontSize: 12, color: C.muted }}>{kpi.earnedScore}/{kpi.targetScore}</span>
                       </div>
-                      <div style={{ height: 6, background: '#E4E3DC', borderRadius: 4, overflow: 'hidden', marginBottom: 8 }}>
-                        <div style={{ height: '100%', width: `${pct}%`, background: C.accent, borderRadius: 4 }} />
-                      </div>
-                      {kpiTasks.length > 0 && (
-                        <button onClick={() => setExpanded({ ...expanded, [kpi.id]: !open })}
-                          style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', cursor: 'pointer', color: C.muted, fontSize: 13, fontWeight: 500, fontFamily: 'inherit', padding: 0 }}>
-                          {open ? <ChevronDown size={15} /> : <ChevronRight size={15} />} {kpi.completedTasks}/{kpi.totalTasks} tasks
-                        </button>
-                      )}
                       {/* Self evaluation button or status */}
-                      {kpi.status === 'ACTIVE' && kpi.completedTasks === kpi.totalTasks && kpi.totalTasks > 0 && (
+                      {kpi.status === 'ACTIVE' && (
                         <button
                           onClick={() => { setEvalModal(kpi); setSelfRating(5); setSelfComment(''); }}
                           style={{
@@ -245,32 +194,6 @@ export default function PerformancePage() {
                               "{kpi.evaluation.managerComment}"
                             </p>
                           )}
-                        </div>
-                      )}
-                      {open && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
-                          {kpiTasks.map((t) => {
-                            const overdue = isOverdue(t.deadline, t.status);
-                            return (
-                              <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: '#FAFAF7', borderRadius: 8 }}>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: C.dark }}>{t.title}</p>
-                                  {t.deadline && (
-                                    <p style={{ margin: '2px 0 0', fontSize: 12, color: overdue ? C.red : t.status === 'COMPLETED' ? C.green : C.muted }}>
-                                      {t.status === 'COMPLETED' ? 'Completed' : overdue ? 'Overdue' : 'Due'} {formatDate(t.deadline)}
-                                    </p>
-                                  )}
-                                </div>
-                                <Badge status={overdue ? 'OVERDUE' : t.status} />
-                                {t.status === 'PENDING' && !overdue && (
-                                  <button onClick={() => completeTask(t.id)}
-                                    style={{ padding: '6px 12px', border: `1.5px solid ${C.accent}`, borderRadius: 7, background: '#fff', color: C.accent, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                                    Mark Complete
-                                  </button>
-                                )}
-                              </div>
-                            );
-                          })}
                         </div>
                       )}
                     </div>
@@ -317,19 +240,6 @@ export default function PerformancePage() {
               <EmptyState title="No ethics review yet" subtitle="Your manager will submit an ethics review for your performance period" />
             </div>
           )}
-
-          {/* Tasks due */}
-          <div style={{ ...card, marginBottom: 20 }}>
-            <h3 style={sectionHeading}>Upcoming &amp; Overdue Tasks</h3>
-            <TasksDuePanel tasks={tasks} tabs={['overdue', 'week', 'all']} onComplete={completeTask} />
-          </div>
-
-          {/* Weekly chart */}
-          <div style={card}>
-            <h3 style={{ ...sectionHeading, marginBottom: 4 }}>This Week&apos;s Activity</h3>
-            <p style={{ fontSize: 13, color: C.muted, margin: '0 0 16px' }}>Tasks completed and tasks that became overdue, by day</p>
-            <WeeklyChart tasks={tasks} height={180} />
-          </div>
         </>
       )}
 
