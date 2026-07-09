@@ -1,5 +1,4 @@
-const { where } = require('sequelize');
-const { Team, TeamMember, User,KPI,Task } = require('../models');
+const { Team, TeamMember, User } = require('../models');
 
 // GET /api/teams — teams created by the current PMO, with member counts
 const getTeams = async (req, res, next) => {
@@ -83,29 +82,17 @@ const updateTeam = async (req, res, next) => {
 
 // DELETE /api/teams/:teamId — delete team (TeamMembers cascade via association)
 const deleteTeam = async (req, res, next) => {
-  try{
+  try {
     const team = await Team.findOne({
-     where: { id: req.params.teamId, createdBy: req.user.id }
+      where: { id: req.params.teamId, createdBy: req.user.id },
     });
     if (!team) return res.status(404).json({ message: 'Team not found' });
 
-    const teamKpis = await KPI.findAll({
-      where : {teamId: team.id},
-      attributes:['id'],
-    });
-    const kpiIds = teamKpis.map((k)=> k.id);
-
-    //delete tasks first then kpi, then members, then team 
-    if(kpiIds.length >0){
-      await Task.destroy({ where: { kpiId: kpiIds } });
-      await KPI.destroy({ where: { teamId: team.id } });
-    }
-    await TeamMember.destroy({where: {teamId: team.id}});
+    await TeamMember.destroy({ where: { teamId: team.id } });
     await team.destroy();
-    // You're missing this at the end
+
     res.json({ message: 'Team deleted' });
-  }
-  catch(err){
+  } catch (err) {
     next(err);
   }
 };

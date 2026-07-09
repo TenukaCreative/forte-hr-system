@@ -1,4 +1,4 @@
-const { KPI, Task, EthicsReview, PerformanceSettings, KPIEvaluation } = require('../models');
+const { KPI, EthicsReview, PerformanceSettings, KPIEvaluation } = require('../models');
 
 const calcPerformance = async (employeeId) => {
   // Get performance weights (latest saved, or 50/50 default)
@@ -13,21 +13,16 @@ const calcPerformance = async (employeeId) => {
   const kpis = await KPI.findAll({
     where: { employeeId, status: ['ACTIVE', 'PENDING_REVIEW', 'CLOSED'] },
     include: [
-      { model: Task, as: 'tasks' },
       { model: KPIEvaluation, as: 'evaluation' },
     ],
   });
 
   const kpiResults = kpis.map((kpi) => {
-    const tasks = kpi.tasks || [];
-    const totalTasks = tasks.length;
-    const completedTasks = tasks.filter((t) => t.status === 'COMPLETED').length;
     const targetScore = parseFloat(kpi.targetScore);
     const earnedScore = kpi.evaluation?.managerRating
       ? (parseFloat(kpi.evaluation.managerRating) / 5) * targetScore
-      : totalTasks > 0
-        ? (completedTasks / totalTasks) * targetScore
-        : 0;
+      : 0;
+
     return {
       id: kpi.id,
       title: kpi.title,
@@ -35,8 +30,6 @@ const calcPerformance = async (employeeId) => {
       endDate: kpi.endDate,
       targetScore,
       earnedScore: parseFloat(earnedScore.toFixed(2)),
-      totalTasks,
-      completedTasks,
       status: kpi.status,
       evaluation: kpi.evaluation ? {
         selfRating: kpi.evaluation.selfRating,
