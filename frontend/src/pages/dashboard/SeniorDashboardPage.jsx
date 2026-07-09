@@ -7,6 +7,7 @@ import { StatCard, Spinner, EmptyState, Badge, Button } from '../../components/u
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 
+//greetings 
 const greeting = () => {
   const h = new Date().getHours();
   if (h < 12) return 'Good Morning';
@@ -19,6 +20,7 @@ const todayString = () =>
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
 
+//todays date and day of week 
 const timeAgo = (date) => {
   if (!date) return '';
   const diff = Date.now() - new Date(date).getTime();
@@ -34,7 +36,7 @@ const timeAgo = (date) => {
   const d = Math.floor(diff / 86400000);
   return `${d}d ago`;
 };
-
+//intials 
 const initials = (name = '') =>
   name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
@@ -42,16 +44,17 @@ const formatType = (t) =>
   t ? t.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : '—';
 
 export default function SeniorDashboardPage() {
-  const { user, resolvedRole } = useAuth();
+  const { user, hasPermission } = useAuth();
+  const isSuperUser = hasPermission('leave_overview');
+
   const navigate = useNavigate();
 
-  const isSuperAdmin = resolvedRole === 'SUPER_ADMIN';
-  // Pending queue: Super Admin reviews the final-approval queue; everyone else
-  // (SENIOR) reviews their own team's manager-step queue.
-  const pendingEndpoint = isSuperAdmin ? '/leaves/pending-approval' : '/leaves/pending-manager';
+//super user only gets all access
+  const pendingEndpoint =  '/leaves/pending-manager';
 
   const [dashData, setDashData] = useState(null);
   const [pendingLeaves, setPendingLeaves] = useState([]);
+  const [finalLeaves, setFinalLeaves] = useState([]);
   const [onLeaveToday, setOnLeaveToday] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -60,18 +63,22 @@ export default function SeniorDashboardPage() {
   useEffect(() => {
     // On Leave Today: Super Admin reads all approved leave (filtered client-side);
     // SENIOR reads their own team's approved-today leave (filtered server-side).
-    const todayEndpoint = isSuperAdmin ? '/leaves/all' : '/leaves/team-approved';
+    const todayEndpoint = isSuperUser ? '/leaves/all' : '/leaves/team-approved';
     const todayStr = new Date().toISOString().slice(0, 10);
-    Promise.all([
+    const fetches = [
       api.get('/dashboard/me'),
-      api.get(pendingEndpoint),
+      api.get('/leaves/pending-manager'),
       api.get('/notifications/me'),
       api.get(todayEndpoint),
-    ])
-      .then(([d, p, n, t]) => {
+    ];
+    if (isSuperUser) fetches.push(api.get('/leaves/pending-approval'));
+
+    Promise.all(fetches)
+      .then(([d, p, n, t, f]) => {
         setDashData(d.data);
         setPendingLeaves(p.data || []);
         setNotifications(n.data || []);
+        setFinalLeaves(isSuperUser ? (f?.data || []) : []);
         setOnLeaveToday(
           (t.data || []).filter(
             (l) => l.status === 'APPROVED' && l.startDate <= todayStr && l.endDate >= todayStr
@@ -86,11 +93,26 @@ export default function SeniorDashboardPage() {
     setApprovingId(id + action);
     try {
       const status = action === 'approve' ? 'APPROVED' : 'REJECTED';
-      const reviewPath = isSuperAdmin ? `/leaves/${id}/final-review` : `/leaves/${id}/manager-review`;
+      const reviewPath =  `/leaves/${id}/manager-review`;
       await api.patch(reviewPath, { status });
       toast.success(action === 'approve' ? 'Leave approved' : 'Leave rejected');
       const { data } = await api.get(pendingEndpoint);
       setPendingLeaves(data || []);
+    } catch (err) {
+      toast.error(err.response?.data?.message || `Failed to ${action}`);
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const handleFinalLeave = async (id, action) => {
+    setApprovingId(id + action);
+    try {
+      const status = action === 'approve' ? 'APPROVED' : 'REJECTED';
+      await api.patch(`/leaves/${id}/final-review`, { status });
+      toast.success(action === 'approve' ? 'Leave approved' : 'Leave rejected');
+      const { data } = await api.get('/leaves/pending-approval');
+      setFinalLeaves(data || []);
     } catch (err) {
       toast.error(err.response?.data?.message || `Failed to ${action}`);
     } finally {
@@ -104,8 +126,6 @@ export default function SeniorDashboardPage() {
     dashData?.user?.name?.split(' ')[0]
     || user?.name?.split(' ')[0]
     || 'there';
-
-  const mgmtScore = dashData?.performance?.managementScore ?? 0;
 
   const unread = notifications.filter((n) => !n.isRead).length;
 
@@ -134,16 +154,15 @@ export default function SeniorDashboardPage() {
       {/* Section 2 — 3 stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 20, marginBottom: 24 }} className="pmo-dash-stats">
         <StatCard
-          label="MANAGEMENT SCORE"
-          value={mgmtScore}
-          color={scoreColor(mgmtScore)}
-          sub="based on team performance"
+          label="MY PERFORMANCE"
+          value={dashData?.performance?.overallScore != null ? dashData.performance.overallScore : '—'}
+          color={dashData?.performance?.overallScore != null ? scoreColor(dashData.performance.overallScore) : 'rgba(21,22,26,0.3)'}
+          sub={`${dashData?.performance?.totalKPIs ?? 0} KPI${dashData?.performance?.totalKPIs !== 1 ? 's' : ''} assigned`}
         />
         <StatCard
-          label="PENDING APPROVALS"
-          value={pendingLeaves.length}
-          color={pendingLeaves.length > 0 ? C.amber : 'rgba(21,22,26,0.3)'}
-          sub="leave requests awaiting"
+          label="LEAVE TAKEN"
+          value={dashData?.leave?.taken ?? 0}
+          sub={`${dashData?.leave?.pending ?? 0} pending approval`}
         />
         <StatCard
           label="NOTIFICATIONS"
@@ -199,77 +218,126 @@ export default function SeniorDashboardPage() {
         <div style={card}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h3 style={{ fontSize: 18, fontWeight: 600, color: C.dark, margin: 0 }}>Leave Requests</h3>
-            {pendingLeaves.length > 0 && (
+            {(pendingLeaves.length + finalLeaves.length) > 0 && (
               <span style={{
                 background: '#fef3c7', color: C.amber, borderRadius: 100,
                 padding: '3px 10px', fontSize: 12, fontWeight: 600,
               }}>
-                {pendingLeaves.length} pending
+                {pendingLeaves.length + finalLeaves.length} pending
               </span>
             )}
           </div>
 
-          {pendingLeaves.length === 0 ? (
-            <EmptyState
-              title="No pending requests"
-              subtitle="All leave requests have been reviewed"
-            />
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {pendingLeaves.slice(0, 5).map((leave) => (
-                <div key={leave.id} style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: 14 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                    <div>
-                      <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: C.dark }}>
-                        {leave.employee?.name || 'Unknown'}
-                      </p>
-                      <p style={{ margin: '2px 0 0', fontSize: 12, color: C.muted }}>
-                        {formatType(leave.leaveType)} · {formatDate(leave.startDate)} → {formatDate(leave.endDate)} · {leave.daysCount} day{Number(leave.daysCount) !== 1 ? 's' : ''}
-                      </p>
+          {/* Section A — Awaiting My Approval */}
+          <div style={{ marginBottom: finalLeaves.length > 0 ? 20 : 0 }}>
+            <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: C.faint, margin: '0 0 12px' }}>
+              Awaiting My Approval
+            </p>
+            {pendingLeaves.length === 0 ? (
+              <p style={{ fontSize: 13, color: C.faint, margin: 0 }}>No requests pending your approval</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {pendingLeaves.slice(0, 3).map((leave) => (
+                  <div key={leave.id} style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: 14 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                      <div>
+                        <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: C.dark }}>
+                          {leave.employee?.name || 'Unknown'}
+                        </p>
+                        <p style={{ margin: '2px 0 0', fontSize: 12, color: C.muted }}>
+                          {formatType(leave.leaveType)} · {formatDate(leave.startDate)} → {formatDate(leave.endDate)} · {leave.daysCount} day{Number(leave.daysCount) !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                      <Badge status={leave.status} />
                     </div>
-                    <Badge status="PENDING" />
+                    {leave.reason && (
+                      <p style={{ margin: '0 0 10px', fontSize: 12, color: C.muted, fontStyle: 'italic' }}>
+                        &ldquo;{leave.reason}&rdquo;
+                      </p>
+                    )}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <Button
+                        variant="primary"
+                        disabled={!!approvingId}
+                        style={{ flex: 1, background: C.green, border: `1.5px solid ${C.green}`, justifyContent: 'center', opacity: approvingId === leave.id + 'approve' ? 0.6 : 1 }}
+                        onClick={() => handleLeave(leave.id, 'approve')}
+                      >
+                        {approvingId === leave.id + 'approve' ? '...' : 'Approve'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        disabled={!!approvingId}
+                        style={{ flex: 1, color: C.red, border: `1.5px solid ${C.red}`, justifyContent: 'center', opacity: approvingId === leave.id + 'reject' ? 0.6 : 1 }}
+                        onClick={() => handleLeave(leave.id, 'reject')}
+                      >
+                        {approvingId === leave.id + 'reject' ? '...' : 'Reject'}
+                      </Button>
+                    </div>
                   </div>
-                  {leave.reason && (
-                    <p style={{ margin: '0 0 10px', fontSize: 12, color: C.muted, fontStyle: 'italic' }}>
-                      &ldquo;{leave.reason}&rdquo;
-                    </p>
+                ))}
+                {pendingLeaves.length > 3 && (
+                  <Button variant="ghost" style={{ width: '100%', justifyContent: 'center' }} onClick={() => navigate('/leave-approvals')}>
+                    View all {pendingLeaves.length} requests
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Section B — Awaiting Final Approval (isSuperUser only) */}
+          {isSuperUser && (
+            <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20 }}>
+              <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: C.faint, margin: '0 0 12px' }}>
+                Awaiting Final Approval
+              </p>
+              {finalLeaves.length === 0 ? (
+                <p style={{ fontSize: 13, color: C.faint, margin: 0 }}>No requests awaiting final approval</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {finalLeaves.slice(0, 3).map((leave) => (
+                    <div key={leave.id} style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: 14 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                        <div>
+                          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: C.dark }}>
+                            {leave.employee?.name || 'Unknown'}
+                          </p>
+                          <p style={{ margin: '2px 0 0', fontSize: 12, color: C.muted }}>
+                            {formatType(leave.leaveType)} · {formatDate(leave.startDate)} → {formatDate(leave.endDate)} · {leave.daysCount} day{Number(leave.daysCount) !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <Badge status={leave.status} />
+                      </div>
+                      {leave.reason && (
+                        <p style={{ margin: '0 0 10px', fontSize: 12, color: C.muted, fontStyle: 'italic' }}>
+                          &ldquo;{leave.reason}&rdquo;
+                        </p>
+                      )}
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <Button
+                          variant="primary"
+                          disabled={!!approvingId}
+                          style={{ flex: 1, background: C.green, border: `1.5px solid ${C.green}`, justifyContent: 'center', opacity: approvingId === leave.id + 'approve' ? 0.6 : 1 }}
+                          onClick={() => handleFinalLeave(leave.id, 'approve')}
+                        >
+                          {approvingId === leave.id + 'approve' ? '...' : 'Approve'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          disabled={!!approvingId}
+                          style={{ flex: 1, color: C.red, border: `1.5px solid ${C.red}`, justifyContent: 'center', opacity: approvingId === leave.id + 'reject' ? 0.6 : 1 }}
+                          onClick={() => handleFinalLeave(leave.id, 'reject')}
+                        >
+                          {approvingId === leave.id + 'reject' ? '...' : 'Reject'}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {finalLeaves.length > 3 && (
+                    <Button variant="ghost" style={{ width: '100%', justifyContent: 'center' }} onClick={() => navigate('/leave-approvals')}>
+                      View all {finalLeaves.length} requests
+                    </Button>
                   )}
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <Button
-                      variant="primary"
-                      disabled={!!approvingId}
-                      style={{
-                        flex: 1, background: C.green, border: `1.5px solid ${C.green}`,
-                        justifyContent: 'center',
-                        opacity: approvingId === leave.id + 'approve' ? 0.6 : 1,
-                      }}
-                      onClick={() => handleLeave(leave.id, 'approve')}
-                    >
-                      {approvingId === leave.id + 'approve' ? '...' : 'Approve'}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      disabled={!!approvingId}
-                      style={{
-                        flex: 1, color: C.red, border: `1.5px solid ${C.red}`,
-                        justifyContent: 'center',
-                        opacity: approvingId === leave.id + 'reject' ? 0.6 : 1,
-                      }}
-                      onClick={() => handleLeave(leave.id, 'reject')}
-                    >
-                      {approvingId === leave.id + 'reject' ? '...' : 'Reject'}
-                    </Button>
-                  </div>
                 </div>
-              ))}
-              {pendingLeaves.length > 5 && (
-                <Button
-                  variant="ghost"
-                  style={{ width: '100%', justifyContent: 'center' }}
-                  onClick={() => navigate('/leave-approvals')}
-                >
-                  View all {pendingLeaves.length} requests
-                </Button>
               )}
             </div>
           )}
