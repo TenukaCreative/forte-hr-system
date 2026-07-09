@@ -251,7 +251,7 @@ function OverviewTab({ userId, onDataChanged }) {
           <>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 20 }}>
               <Stat label="Total Days" value={total} />
-              <Stat label="Used Days" value={used} />
+              <Stat label="ApproveDx Days" value={used} />
               <Stat label="Pending" value={pendingDays} color="#D97706" />
               <Stat label="Available" value={availableDays} color={availableDays > 0 ? C.green : C.red} />
               <Stat label="Planned" value={plans.length} color={plans.length > 0 ? C.amber : C.dark} />
