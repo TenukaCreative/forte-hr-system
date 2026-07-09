@@ -1,5 +1,4 @@
 const axios = require('axios');
-const { msalInstance } = require('../../../frontend/src/auth/msalConfig');
 
 const GRAPH = process.env.GRAPH_API_ENDPOINT || 'https://graph.microsoft.com/v1.0';
 
