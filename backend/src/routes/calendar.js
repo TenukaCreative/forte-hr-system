@@ -7,7 +7,9 @@ const { getOutlookEvents } = require('../services/calendarService');
 // Returns Outlook events for the logged-in user.
 router.get('/outlook', auth, async (req, res, next) => {
   try {
-    const events = await getOutlookEvents(req.user.id);
+    const msToken = req.headers['x-ms-token'];
+    if (!msToken) return res.json([]);
+    const events = await getOutlookEvents(msToken);
     res.json(events);
   } catch (err) {
     next(err);

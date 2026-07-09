@@ -515,7 +515,7 @@ export default function EmployeeDetailPage() {
         </div>
 
         {canManageLeave && <LeaveEntitlementCard userId={userId} />}
-        {canManageLeave && <AssignRoleCard userId={userId} currentRoleId={userData?.assignedRoleId} />}
+        {canManageLeave && <AssignRoleCard userId={userId} currentRoleId={userData?.assignedRoleId} onSaved={fetchData} />}
         </div>
       </div>
     </Shell>
@@ -619,7 +619,7 @@ function LeaveEntitlementCard({ userId }) {
   );
 }
 
-function AssignRoleCard({ userId, currentRoleId }) {
+function AssignRoleCard({ userId, currentRoleId, onSaved }) {
   const [roles, setRoles] = useState(null); // null = loading
   const [loadError, setLoadError] = useState(false);
   const [selectedRoleId, setSelectedRoleId] = useState(currentRoleId || '');
@@ -641,6 +641,7 @@ function AssignRoleCard({ userId, currentRoleId }) {
     try {
       await api.patch(`/roles/assign/${userId}`, { roleId: selectedRoleId || null });
       toast.success('Role assigned');
+      if (onSaved) onSaved();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to assign role');
     } finally {
