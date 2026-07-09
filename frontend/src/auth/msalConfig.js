@@ -29,7 +29,7 @@ export const loginRequest = {
     'profile',
     'email',
     'User.Read',
-    'Calenders.Read',
+    'Calendars.Read'
   ],
 };
 
