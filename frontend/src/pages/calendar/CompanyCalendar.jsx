@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Shell from '../../components/layout/Shell';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
+import { msalInstance, loginRequest } from '../../auth/msalConfig';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -34,16 +35,45 @@ const { hasPermission } = useAuth();
   useEffect(() => {
     // HR / Super Admin see everyone's approved leave; other roles only their own.
     const isHr = hasPermission('employee_management');
-    api.get(isHr ? '/leaves/all' : '/leaves/my')
+    if(isHr){  
+    api.get('/leaves/all')
       .then((r) => setLeaves(r.data.filter((l) => l.status === 'APPROVED')))
       .catch(() => toast.error('Failed to load calendar'))
       .finally(() => setLoading(false));
+    }
+    else{
+      setLoading(false);
+    }
 
     // Outlook events are a bonus layer — fail silently so the calendar
     // still renders leaves if the user hasn't granted calendar access.
-    api.get('/calendar/outlook')
-      .then((r) => setOutlookEvents(r.data || []))
-      .catch(() => {});
+    const fetchOutlookEvents = async () => {
+      try {
+        const account = msalInstance.getActiveAccount();
+        if (!account) return;
+        let msToken;
+        try {
+          const tokenResponse = await msalInstance.acquireTokenSilent({
+            ...loginRequest,
+            account,
+          });
+          msToken = tokenResponse.accessToken;
+        } catch {
+          await msalInstance.acquireTokenRedirect({
+            ...loginRequest,
+            account,
+          });
+          return;
+        }
+        const r = await api.get('/calendar/outlook', {
+          headers: { 'x-ms-token': msToken },
+        });
+        setOutlookEvents(r.data || []);
+      } catch {
+        // fail silently — outlook events are a bonus layer
+      }
+    };
+    fetchOutlookEvents();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const year  = viewDate.getFullYear();

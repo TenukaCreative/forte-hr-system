@@ -29,6 +29,7 @@ export const loginRequest = {
     'profile',
     'email',
     'User.Read',
+    'Calender.Read',
   ],
 };
 

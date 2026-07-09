@@ -1,16 +1,12 @@
 const axios = require('axios');
-const { User } = require('../models');
-const { decrypt } = require('../utils/encryption');
+const { msalInstance } = require('../../../frontend/src/auth/msalConfig');
 
 const GRAPH = process.env.GRAPH_API_ENDPOINT || 'https://graph.microsoft.com/v1.0';
 
-const getOutlookEvents = async (userId) => {
-  try {
-    const user = await User.findByPk(userId, { attributes: ['msAccessToken'] });
+const getOutlookEvents = async (msToken) => {
 
-    if (!user?.msAccessToken) {
-      return [];
-    }
+  try {
+    if (!msToken) return [];
 
     const now = new Date();
     const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1).toISOString();
@@ -18,7 +14,7 @@ const getOutlookEvents = async (userId) => {
 
     const { data } = await axios.get(`${GRAPH}/me/events`, {
       headers: {
-        Authorization: `Bearer ${decrypt(user.msAccessToken)}`,
+        Authorization: `Bearer ${msToken}`,
         'Content-Type': 'application/json',
       },
       params: {
