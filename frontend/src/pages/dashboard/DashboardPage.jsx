@@ -184,9 +184,10 @@ export default function DashboardPage() {
             {todayString()} · Here&apos;s what&apos;s happening today
           </p>
         </div>
-        {user?.role && (
+        {user?.designation && (
           <span style={{ background: '#C8203D', color: '#fff', padding: '6px 14px', borderRadius: 100, fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            {user.role.replace(/_/g, ' ')}
+            {user.designation}
+            
           </span>
         )}
       </div>

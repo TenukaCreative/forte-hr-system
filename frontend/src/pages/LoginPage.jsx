@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import forteLogo from '../assets/forte-logo.webp';
 
 const MicrosoftLogo = () => (
   <svg width="20" height="20" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -16,6 +17,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [hovered, setHovered] = useState(false);
 
   const handleLogin = async () => {
     setLoading(true);
@@ -41,10 +43,19 @@ export default function LoginPage() {
   return (
     <div style={styles.page}>
       <div style={styles.card}>
-        <div style={styles.logoRow}>
+           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+                <img 
+                  src={forteLogo} 
+                  alt="Forte Insurance" 
+                  style={{ height:60, width: 'auto' }} 
+                />
+              </div>
+        {/* previous logo styling */}
+        {/* <div style={styles.logoRow}>
           <div style={styles.logoMark}>F</div>
-          <span style={styles.logoText}>Forte TrackIT</span>
-        </div>
+       
+          <span style={styles.logoText}>Forte TrackUS</span>
+         </div>  */}
         <h1 style={styles.heading}>Welcome back</h1>
         <p style={styles.subheading}>
           Sign in with your Forte Insurance Microsoft account to continue.
@@ -53,10 +64,15 @@ export default function LoginPage() {
         <button
           onClick={handleLogin}
           disabled={loading}
+          onMouseEnter={()=> setHovered(true)}
+          onMouseLeave={()=> setHovered(false)}
           style={{
             ...styles.msButton,
             opacity: loading ? 0.7 : 1,
             cursor: loading ? 'not-allowed' : 'pointer',
+            border: hovered? '2px solid #BE1A1A' : '2px solid #15161A',
+            boxShadow: hovered? '0 0 0 3px rgba(200,32,61,0.15)' : 'none',
+            transition: 'border-color 0.15s, box-shadow 0.4s',
           }}
         >
           {!loading && <MicrosoftLogo />}
@@ -145,9 +161,9 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: '10px',
-    backgroundColor: '#15161A',
-    color: '#FFFFFF',
-    border: 'none',
+    color: '#15161A',
+    backgroundColor: '#FFFFFF',
+    border: '2px solid #15161A',
     borderRadius: '8px',
     padding: '13px 20px',
     fontSize: '14px',
