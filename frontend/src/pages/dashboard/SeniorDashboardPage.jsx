@@ -143,12 +143,11 @@ export default function SeniorDashboardPage() {
             {todayString()} · Here&apos;s what&apos;s happening today
           </p>
         </div>
-        <span style={{
-          background: C.accent, color: '#fff', padding: '6px 14px', borderRadius: 100,
-          fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em',
-        }}>
-          HEAD OF PMO
-        </span>
+        {user?.designation && (
+          <span style={{ background: '#C8203D', color: '#fff', padding: '6px 14px', borderRadius: 100, fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            {user.designation}
+          </span>
+        )}
       </div>
 
       {/* Section 2 — 3 stat cards */}

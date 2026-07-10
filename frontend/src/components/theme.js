@@ -15,7 +15,7 @@ export const C = {
 };
 
 export const card = {
-  background: '#fff',
+  background: '#fff', 
   borderRadius: 12,
   boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
   padding: 24,
