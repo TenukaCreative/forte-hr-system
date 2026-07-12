@@ -5,54 +5,12 @@ import api from '../../api/axios';
 import { Button } from '../ui';
 import LeaveDetailModal from './LeaveDetailModal';
 import TeamLeaveGantt from './TeamLeaveGantt';
+import { C, card, formatDate, STATUS_STYLES, LEAVE_TYPE_COLORS, getLeaveTypeColor, getLeaveTypeTextColor, LEAVE_TYPE_LABELS } from '../../components/theme';
 
 // Shared building blocks for the two leave dashboards (HR LeaveOverview and
 // Senior/Manager LeaveApprovals). The page-level components compose these views
 // into tabs; the only differences between the two pages are which endpoints
 // each view hits, passed in via props.
-
-export const STATUS_STYLES = {
-  PENDING:          { bg: '#FEF3C7', color: '#D97706', label: 'Pending' },
-  MANAGER_APPROVED: { bg: '#DBEAFE', color: '#2563EB', label: 'Manager Approved' },
-  APPROVED:         { bg: '#DCFCE7', color: '#16A34A', label: 'Approved' },
-  REJECTED:         { bg: '#FEE2E2', color: '#DC2626', label: 'Rejected' },
-};
-
-// Leave type → pill colours, shared across the leave UI. Light backgrounds
-// (SPECIAL, HOSPITALIZATION) use dark text for contrast; the rest use white.
-export const LEAVE_TYPE_COLORS = {
-  ANNUAL:          '#BA5A5A',
-  FULL_DAY:        '#778873',
-  HALF_DAY:        '#428475',
-  CHANGE:          '#EC6530',
-  HOSPITALIZATION: '#9FA1FF',
-  MATERNITY:       '#39B1D1',
-  SICK:            '#ECB65F',
-  SPECIAL:         '#C1EBE9',
-  OTHER:           '#7288AE',
-};
-export const getLeaveTypeColor = (type) => LEAVE_TYPE_COLORS[type] || '#7288AE';
-
-const LIGHT_LEAVE_TYPES = ['SPECIAL', 'HOSPITALIZATION'];
-export const getLeaveTypeTextColor = (type) =>
-  LIGHT_LEAVE_TYPES.includes(type) ? '#15161A' : '#FFFFFF';
-
-export const LEAVE_TYPE_LABELS = {
-  ANNUAL:          'Annual Leave',
-  FULL_DAY:        'Full Day',
-  HALF_DAY:        'Half Day',
-  CHANGE:          'Change Leave',
-  HOSPITALIZATION: 'Hospitalization',
-  MATERNITY:       'Maternity Leave',
-  SICK:            'Sick Leave',
-  SPECIAL:         'Special Leave',
-  OTHER:           'Other',
-};
-
-export const formatDate = (iso) =>
-  iso
-    ? new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-    : '—';
 
 export const initial = (name) => (name ? name.trim().charAt(0).toUpperCase() : '?');
 

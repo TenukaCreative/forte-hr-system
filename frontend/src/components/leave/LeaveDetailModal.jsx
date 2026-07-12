@@ -3,39 +3,9 @@ import { toast } from 'react-hot-toast';
 import { X, Trash2 } from 'lucide-react';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
-import { C, card, formatDate } from '../theme';
+import { C, card, formatDate, LEAVE_TYPE_COLORS, getLeaveTypeColor, getLeaveTypeTextColor, LEAVE_TYPE_LABELS } from '../../components/theme';
 import { Badge, Button } from '../ui';
 
-// Leave type → pill colours, shared across the leave UI. Light backgrounds
-// (SPECIAL, HOSPITALIZATION) use dark text for contrast; the rest use white.
-const LEAVE_TYPE_COLORS = {
-  ANNUAL:          '#BA5A5A',
-  FULL_DAY:        '#778873',
-  HALF_DAY:        '#428475',
-  CHANGE:          '#EC6530',
-  HOSPITALIZATION: '#9FA1FF',
-  MATERNITY:       '#39B1D1',
-  SICK:            '#ECB65F',
-  SPECIAL:         '#C1EBE9',
-  OTHER:           '#7288AE',
-};
-const getLeaveTypeColor = (type) => LEAVE_TYPE_COLORS[type] || '#7288AE';
-
-const LIGHT_LEAVE_TYPES = ['SPECIAL', 'HOSPITALIZATION'];
-const getLeaveTypeTextColor = (type) =>
-  LIGHT_LEAVE_TYPES.includes(type) ? '#15161A' : '#FFFFFF';
-
-const LEAVE_TYPE_LABELS = {
-  ANNUAL:          'Annual Leave',
-  FULL_DAY:        'Full Day',
-  HALF_DAY:        'Half Day',
-  CHANGE:          'Change Leave',
-  HOSPITALIZATION: 'Hospitalization',
-  MATERNITY:       'Maternity Leave',
-  SICK:            'Sick Leave',
-  SPECIAL:         'Special Leave',
-  OTHER:           'Other',
-};
 const typeLabel = (v) => LEAVE_TYPE_LABELS[v] || v;
 
 const labelStyle = {
