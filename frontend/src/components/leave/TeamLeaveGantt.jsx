@@ -1,23 +1,11 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { C, card, formatDate } from '../theme';
+import { C, card, formatDate, LEAVE_TYPE_LABELS, getLeaveTypeColor, getLeaveTypeTextColor } from '../../components/theme';
 import { EmptyState } from '../ui';
 
 const DAY_W = 36;
 const COL_W = 160;
 const WINDOW_DAYS = 30;
-
-const LEAVE_TYPE_LABELS = {
-  ANNUAL: 'Annual Leave',
-  FULL_DAY: 'Full Day Leave',
-  HALF_DAY: 'Half Day Leave',
-  CHANGE: 'Change Leave',
-  HOSPITALIZATION: 'Hospitalization Leave',
-  MATERNITY: 'Maternity Leave',
-  SICK: 'Sick Leave',
-  SPECIAL: 'Special Leave',
-};
-const leaveTypeLabel = (type) => LEAVE_TYPE_LABELS[type] || type;
 
 const TYPE_OPTIONS = [
   { value: 'ALL', label: 'All Types' },
@@ -223,7 +211,7 @@ export default function TeamLeaveGantt({ requests = [], onSelectRequest }) {
                         <div
                           key={r.id}
                           onClick={() => onSelectRequest?.(r)}
-                          title={`${emp.name} · ${leaveTypeLabel(r.leaveType)} · ${formatDate(r.startDate)} → ${formatDate(r.endDate)} · ${r.daysCount} day(s)`}
+                          title={`${emp.name} · ${LEAVE_TYPE_LABELS[r.leaveType] || r.leaveType} · ${formatDate(r.startDate)} → ${formatDate(r.endDate)} · ${r.daysCount} day(s)`}
                           style={{
                             position: 'absolute', top: 11, left, width, height: 30,
                             background: style.bg, color: style.color, border: style.border,
@@ -232,7 +220,7 @@ export default function TeamLeaveGantt({ requests = [], onSelectRequest }) {
                             fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                           }}
                         >
-                          {leaveTypeLabel(r.leaveType)}
+                          {LEAVE_TYPE_LABELS[r.leaveType] || r.leaveType}
                         </div>
                       );
                     })}

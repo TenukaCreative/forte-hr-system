@@ -51,6 +51,7 @@ function SummaryCard({ label, value, sub, Icon, color, iconBg }) {
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         }}>
           <Icon size={18} color={color} />
+          <span> this is a new table </span>
         </span>
       </div>
       <p style={{ fontSize: 42, fontWeight: 700, color, margin: '0 0 4px', lineHeight: 1, letterSpacing: '-0.02em' }}>

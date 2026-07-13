@@ -96,3 +96,54 @@ export const isThisWeek = (iso) => {
   const t = new Date(iso);
   return t >= startOfWeek() && t <= endOfWeek();
 };
+
+// Apply an alpha channel to a 6-digit hex colour → rgba() string.
+export const withAlpha = (hex, alpha) => {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+// Planned leave color
+export const PLAN_COLOR = '#305669';
+
+// Leave status styles — shared across all leave UI
+export const STATUS_STYLES = {
+  PENDING:          { bg: '#FEF3C7', color: '#D97706', label: 'Pending' },
+  MANAGER_APPROVED: { bg: '#DBEAFE', color: '#2563EB', label: 'Manager Approved' },
+  APPROVED:         { bg: '#DCFCE7', color: '#16A34A', label: 'Approved' },
+  REJECTED:         { bg: '#FEE2E2', color: '#DC2626', label: 'Rejected' },
+};
+
+// Leave type background colors
+export const LEAVE_TYPE_COLORS = {
+  ANNUAL:          '#BA5A5A',
+  FULL_DAY:        '#778873',
+  HALF_DAY:        '#428475',
+  CHANGE:          '#EC6530',
+  HOSPITALIZATION: '#9FA1FF',
+  MATERNITY:       '#39B1D1',
+  SICK:            '#ECB65F',
+  SPECIAL:         '#C1EBE9',
+  OTHER:           '#7288AE',
+};
+
+export const getLeaveTypeColor = (type) => LEAVE_TYPE_COLORS[type] || '#7288AE';
+
+export const LIGHT_LEAVE_TYPES = ['SPECIAL', 'HOSPITALIZATION'];
+export const getLeaveTypeTextColor = (type) =>
+  LIGHT_LEAVE_TYPES.includes(type) ? C.dark : '#FFFFFF';
+
+export const LEAVE_TYPE_LABELS = {
+  ANNUAL:          'Annual Leave',
+  FULL_DAY:        'Full Day',
+  HALF_DAY:        'Half Day',
+  CHANGE:          'Change Leave',
+  HOSPITALIZATION: 'Hospitalization',
+  MATERNITY:       'Maternity Leave',
+  SICK:            'Sick Leave',
+  SPECIAL:         'Special Leave',
+  OTHER:           'Other',
+};

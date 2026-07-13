@@ -4,7 +4,8 @@ import { toast } from 'react-hot-toast';
 import { CalendarPlus, Calendar, TrendingUp, Bell, BarChart2 } from 'lucide-react';
 import Shell from '../../components/layout/Shell';
 import api from '../../api/axios';
-import { KpiDates } from '../../components/ui';
+import { KpiDates, StatCard, EmptyState } from '../../components/ui';
+import { C, card, scoreColor, formatDayMonth, STATUS_STYLES, LEAVE_TYPE_LABELS, getLeaveTypeColor, getLeaveTypeTextColor } from '../../components/theme';
 
 const timeAgo = (date) => {
   if (!date) return '';
@@ -44,62 +45,30 @@ const weekRangeLabel = () => {
   return `${fmt(start)} – ${fmt(end)}`;
 };
 
-const formatDayMonth = (iso) => {
-  if (!iso) return '';
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-};
-
-const scoreColor = (score) => {
-  if (score >= 80) return '#16a34a';
-  if (score >= 50) return '#d97706';
-  return '#C8203D';
-};
-
-const formatLeaveType = (t) =>
-  t ? t.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : '—';
-
-const STATUS_STYLES = {
-  PENDING:  { bg: '#FEF3C7', color: '#D97706' },
-  APPROVED: { bg: '#DCFCE7', color: '#16A34A' },
-  REJECTED: { bg: '#FEE2E2', color: '#DC2626' },
-};
-
-const TYPE_STYLES = {
-  PAID:   { bg: '#DCFCE7', color: '#16A34A' },
-  UNPAID: { bg: '#FEF3C7', color: '#D97706' },
-};
-
-const card = {
-  background: '#fff',
-  borderRadius: 12,
-  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-  padding: 24,
-};
-
 const statLabel = {
   fontSize: 11,
   fontWeight: 600,
   letterSpacing: '0.07em',
   textTransform: 'uppercase',
-  color: 'rgba(21,22,26,0.4)',
+  color: C.faint,
   margin: 0,
 };
 
 const statValue = {
   fontSize: 42,
   fontWeight: 500,
-  color: '#15161A',
+  color: C.dark,
   margin: '10px 0 4px',
   lineHeight: 1,
   letterSpacing: '-0.02em',
 };
 
-const statSub = { fontSize: 13, color: 'rgba(21,22,26,0.5)', margin: 0 };
+const statSub = { fontSize: 13, color: C.muted, margin: 0 };
 
 const sectionHeading = {
   fontSize: 20,
   fontWeight: 600,
-  color: '#15161A',
+  color: C.dark,
   margin: '0 0 16px',
   letterSpacing: '-0.01em',
 };
@@ -130,9 +99,9 @@ export default function DashboardPage() {
     @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
     .skel { background: linear-gradient(90deg,#f0eeea 25%,#e8e6e1 50%,#f0eeea 75%); background-size:200% 100%; animation: shimmer 1.5s infinite; }
     .qa-card { transition: border-color 0.18s, box-shadow 0.18s; }
-    .qa-card:hover { border-color: #C8203D; box-shadow: 0 2px 8px rgba(200,32,61,0.08); }
+    .qa-card:hover { border-color: ${C.accent}; box-shadow: 0 2px 8px rgba(200,32,61,0.08); }
     .notif-row { transition: background 0.15s; }
-    .notif-row:hover { background: #FAFAF7; }
+    .notif-row:hover { background: ${C.bg}; }
     .leave-cta:hover { background: #a81830 !important; }
     @media(max-width:768px){
       .dash-stats{grid-template-columns:1fr 1fr!important}
@@ -167,7 +136,7 @@ export default function DashboardPage() {
   const recentNotifs = notifications.slice(0, 5);
 
   const leavePct = Math.min(100, ((leave?.taken || 0) / 14) * 100);
-  const perfColor = performance ? scoreColor(performance.overallScore) : '#15161A';
+  const perfColor = performance ? scoreColor(performance.overallScore) : C.dark;
   const unread = notifMeta?.unread ?? 0;
 
   return (
@@ -177,17 +146,17 @@ export default function DashboardPage() {
       {/* Section 1 — Welcome header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 className="dash-greeting" style={{ fontSize: 36, fontWeight: 600, color: '#15161A', margin: '0 0 6px', lineHeight: 1.15, letterSpacing: '-0.02em' }}>
+          <h1 className="dash-greeting" style={{ fontSize: 36, fontWeight: 600, color: C.dark, margin: '0 0 6px', lineHeight: 1.15, letterSpacing: '-0.02em' }}>
             {greeting()}, {firstName}!
           </h1>
-          <p style={{ fontSize: 14, color: 'rgba(21,22,26,0.5)', margin: 0 }}>
+          <p style={{ fontSize: 14, color: C.muted, margin: 0 }}>
             {todayString()} · Here&apos;s what&apos;s happening today
           </p>
         </div>
         {user?.designation && (
-          <span style={{ background: '#C8203D', color: '#fff', padding: '6px 14px', borderRadius: 100, fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          <span style={{ background: C.accent, color: '#fff', padding: '6px 14px', borderRadius: 100, fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             {user.designation}
-            
+
           </span>
         )}
       </div>
@@ -199,8 +168,8 @@ export default function DashboardPage() {
           <p style={statLabel}>Leave Taken</p>
           <p style={statValue}>{leave?.taken ?? 0}</p>
           <p style={{ ...statSub, marginBottom: 14 }}>{leave?.pending ?? 0} pending approval</p>
-          <div style={{ height: 4, background: '#E4E3DC', borderRadius: 4, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${leavePct}%`, background: '#C8203D', borderRadius: 4, transition: 'width 0.4s' }} />
+          <div style={{ height: 4, background: C.border, borderRadius: 4, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${leavePct}%`, background: C.accent, borderRadius: 4, transition: 'width 0.4s' }} />
           </div>
         </div>
 
@@ -218,7 +187,7 @@ export default function DashboardPage() {
           ) : (
             <>
               <p style={{ ...statValue, color: 'rgba(21,22,26,0.3)' }}>—</p>
-              <p style={{ ...statSub, color: 'rgba(21,22,26,0.4)' }}>No KPIs assigned yet</p>
+              <p style={{ ...statSub, color: C.faint }}>No KPIs assigned yet</p>
             </>
           )}
         </div>
@@ -237,24 +206,24 @@ export default function DashboardPage() {
         {/* Notifications */}
         <div style={card}>
           <p style={statLabel}>Notifications</p>
-          <p style={{ ...statValue, color: unread > 0 ? '#C8203D' : 'rgba(21,22,26,0.3)' }}>{unread}</p>
+          <p style={{ ...statValue, color: unread > 0 ? C.accent : 'rgba(21,22,26,0.3)' }}>{unread}</p>
           <p style={statSub}>unread messages</p>
         </div>
       </div>
 
       {/* Quick Actions */}
       <div className="dash-quick" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 24 }}>
-        <button className="qa-card" onClick={() => navigate('/leave')} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', background: '#fff', border: '1px solid #E4E3DC', borderRadius: 12, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
-          <CalendarPlus size={20} style={{ color: '#C8203D' }} />
-          <span style={{ fontSize: 14, fontWeight: 500, color: '#15161A' }}>Request Leave</span>
+        <button className="qa-card" onClick={() => navigate('/leave')} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+          <CalendarPlus size={20} style={{ color: C.accent }} />
+          <span style={{ fontSize: 14, fontWeight: 500, color: C.dark }}>Request Leave</span>
         </button>
-        <button className="qa-card" onClick={() => navigate('/calendar')} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', background: '#fff', border: '1px solid #E4E3DC', borderRadius: 12, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
-          <Calendar size={20} style={{ color: '#C8203D' }} />
-          <span style={{ fontSize: 14, fontWeight: 500, color: '#15161A' }}>Company Calendar</span>
+        <button className="qa-card" onClick={() => navigate('/calendar')} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+          <Calendar size={20} style={{ color: C.accent }} />
+          <span style={{ fontSize: 14, fontWeight: 500, color: C.dark }}>Company Calendar</span>
         </button>
-        <button className="qa-card" onClick={() => navigate('/performance')} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', background: '#fff', border: '1px solid #E4E3DC', borderRadius: 12, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
-          <TrendingUp size={20} style={{ color: '#C8203D' }} />
-          <span style={{ fontSize: 14, fontWeight: 500, color: '#15161A' }}>My Performance</span>
+        <button className="qa-card" onClick={() => navigate('/performance')} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+          <TrendingUp size={20} style={{ color: C.accent }} />
+          <span style={{ fontSize: 14, fontWeight: 500, color: C.dark }}>My Performance</span>
         </button>
       </div>
 
@@ -265,7 +234,7 @@ export default function DashboardPage() {
         <div style={card}>
           <h3 style={sectionHeading}>Performance Overview</h3>
           {!performance ? (
-            <div style={{ textAlign: 'center', padding: '40px 16px', color: 'rgba(21,22,26,0.4)' }}>
+            <div style={{ textAlign: 'center', padding: '40px 16px', color: C.faint }}>
               <BarChart2 size={32} style={{ color: 'rgba(21,22,26,0.2)', marginBottom: 10 }} />
               <p style={{ margin: 0, fontSize: 15, fontWeight: 500, color: 'rgba(21,22,26,0.55)' }}>No KPIs assigned yet</p>
               <p style={{ margin: '6px 0 0', fontSize: 13 }}>Your manager will assign KPIs to track your performance</p>
@@ -279,9 +248,9 @@ export default function DashboardPage() {
                   const offset = c - (performance.overallScore / 100) * c;
                   return (
                     <svg width={150} height={150} viewBox="0 0 150 150">
-                      <circle cx={75} cy={75} r={r} fill="none" stroke="#E4E3DC" strokeWidth={10} />
+                      <circle cx={75} cy={75} r={r} fill="none" stroke={C.border} strokeWidth={10} />
                       <circle cx={75} cy={75} r={r} fill="none" stroke={perfColor} strokeWidth={10} strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round" transform="rotate(-90 75 75)" style={{ transition: 'stroke-dashoffset 0.6s' }} />
-                      <text x={75} y={84} textAnchor="middle" fontSize={32} fontWeight={600} fill="#15161A" letterSpacing="-0.02em">{performance.overallScore}</text>
+                      <text x={75} y={84} textAnchor="middle" fontSize={32} fontWeight={600} fill={C.dark} letterSpacing="-0.02em">{performance.overallScore}</text>
                     </svg>
                   );
                 })()}
@@ -294,13 +263,13 @@ export default function DashboardPage() {
                     <div key={kpi.id}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: 13, color: '#15161A', fontWeight: 500 }}>{kpi.title}</span>
+                          <span style={{ fontSize: 13, color: C.dark, fontWeight: 500 }}>{kpi.title}</span>
                           <KpiDates startDate={kpi.startDate} endDate={kpi.endDate} size={11} />
                         </div>
-                        <span style={{ fontSize: 12, color: 'rgba(21,22,26,0.5)' }}>{kpi.earnedScore}/{kpi.targetScore}</span>
+                        <span style={{ fontSize: 12, color: C.muted }}>{kpi.earnedScore}/{kpi.targetScore}</span>
                       </div>
-                      <div style={{ height: 6, background: '#E4E3DC', borderRadius: 4, overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${pct}%`, background: '#C8203D', borderRadius: 4 }} />
+                      <div style={{ height: 6, background: C.border, borderRadius: 4, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${pct}%`, background: C.accent, borderRadius: 4 }} />
                       </div>
                     </div>
                   );
@@ -314,27 +283,32 @@ export default function DashboardPage() {
         <div style={card}>
           <h3 style={sectionHeading}>Leave Requests</h3>
           {recentLeaves.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '24px 16px', color: 'rgba(21,22,26,0.4)', fontSize: 14 }}>
+            <div style={{ textAlign: 'center', padding: '24px 16px', color: C.faint, fontSize: 14 }}>
               No leave requests yet
             </div>
           ) : (
             <div>
               {recentLeaves.map((l, i) => {
-                const tStyle = TYPE_STYLES[l.leaveType] || TYPE_STYLES.PAID;
                 const sStyle = STATUS_STYLES[l.status] || STATUS_STYLES.PENDING;
                 return (
-                  <div key={l.id} style={{ padding: '12px 0', borderBottom: i < recentLeaves.length - 1 ? '1px solid #E4E3DC' : 'none' }}>
+                  <div key={l.id} style={{ padding: '12px 0', borderBottom: i < recentLeaves.length - 1 ? `1px solid ${C.border}` : 'none' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <span style={{ fontSize: 13, color: '#15161A', fontWeight: 500 }}>
+                      <span style={{ fontSize: 13, color: C.dark, fontWeight: 500 }}>
                         {formatDayMonth(l.startDate)} — {formatDayMonth(l.endDate)}
                       </span>
                       <span style={{ background: sStyle.bg, color: sStyle.color, borderRadius: 100, padding: '2px 9px', fontSize: 10, fontWeight: 600, letterSpacing: '0.04em' }}>
-                        {l.status}
+                        {sStyle.label || l.status}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ background: tStyle.bg, color: tStyle.color, borderRadius: 100, padding: '2px 9px', fontSize: 10, fontWeight: 600 }}>{formatLeaveType(l.leaveType)}</span>
-                      <span style={{ fontSize: 12, color: 'rgba(21,22,26,0.5)' }}>{l.daysCount} day{Number(l.daysCount) !== 1 ? 's' : ''}</span>
+                      <span style={{
+                        backgroundColor: getLeaveTypeColor(l.leaveType),
+                        color: getLeaveTypeTextColor(l.leaveType),
+                        borderRadius: 100, padding: '2px 9px', fontSize: 10, fontWeight: 600
+                      }}>
+                        {LEAVE_TYPE_LABELS[l.leaveType] || l.leaveType}
+                      </span>
+                      <span style={{ fontSize: 12, color: C.muted }}>{l.daysCount} day{Number(l.daysCount) !== 1 ? 's' : ''}</span>
                     </div>
                   </div>
                 );
@@ -344,7 +318,7 @@ export default function DashboardPage() {
           <button
             className="leave-cta"
             onClick={() => navigate('/leave')}
-            style={{ marginTop: 16, width: '100%', padding: '12px 16px', border: '1.5px solid #C8203D', borderRadius: 8, background: '#C8203D', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.18s' }}
+            style={{ marginTop: 16, width: '100%', padding: '12px 16px', border: `1.5px solid ${C.accent}`, borderRadius: 8, background: C.accent, color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.18s' }}
           >
             Request Leave
           </button>
@@ -355,7 +329,7 @@ export default function DashboardPage() {
       <div style={card}>
         <h3 style={sectionHeading}>Recent Notifications</h3>
         {recentNotifs.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '36px 16px', color: 'rgba(21,22,26,0.4)' }}>
+          <div style={{ textAlign: 'center', padding: '36px 16px', color: C.faint }}>
             <Bell size={28} style={{ color: 'rgba(21,22,26,0.2)', marginBottom: 8 }} />
             <p style={{ margin: 0, fontSize: 14 }}>You&apos;re all caught up</p>
           </div>
@@ -365,17 +339,17 @@ export default function DashboardPage() {
               <div
                 key={n.id}
                 className="notif-row"
-                style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 10px', borderBottom: i < recentNotifs.length - 1 ? '1px solid #E4E3DC' : 'none', borderRadius: 6 }}
+                style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 10px', borderBottom: i < recentNotifs.length - 1 ? `1px solid ${C.border}` : 'none', borderRadius: 6 }}
               >
                 <span style={{
                   width: 8, height: 8, borderRadius: '50%', flexShrink: 0, marginTop: 7,
-                  background: n.isRead ? '#E4E3DC' : '#C8203D',
+                  background: n.isRead ? C.border : C.accent,
                 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{
                     margin: 0,
                     fontSize: 14,
-                    color: n.isRead ? 'rgba(21,22,26,0.5)' : '#15161A',
+                    color: n.isRead ? C.muted : C.dark,
                     fontWeight: n.isRead ? 400 : 500,
                     lineHeight: 1.45,
                   }}>
@@ -384,7 +358,7 @@ export default function DashboardPage() {
                   <p style={{ margin: '3px 0 0', fontSize: 12, color: 'rgba(21,22,26,0.35)' }}>{timeAgo(n.createdAt)}</p>
                 </div>
                 {!n.isRead && (
-                  <span style={{ background: '#C8203D', color: '#fff', borderRadius: 100, padding: '2px 8px', fontSize: 10, fontWeight: 600, alignSelf: 'flex-start' }}>
+                  <span style={{ background: C.accent, color: '#fff', borderRadius: 100, padding: '2px 8px', fontSize: 10, fontWeight: 600, alignSelf: 'flex-start' }}>
                     New
                   </span>
                 )}
