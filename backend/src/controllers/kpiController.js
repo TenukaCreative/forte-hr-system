@@ -1,5 +1,5 @@
 const { KPI, Employee, User, Team, Notification, KPIEvaluation } = require('../models');
-const { notifyKpiAssigned, notifyKpiDeleted, notifyKpiUpdated } = require('../services/notificationService');
+const { notifyKpiAssigned, notifyKpiDeleted, notifyKpiUpdated, notifySelfEvalSubmitted, notifyManagerEvalDone } = require('../services/notificationService');
 
 // GET /api/kpis/my-team — every KPI this PMO has assigned, with member + tasks
 const getMyTeamKpis = async (req, res, next) => {
@@ -197,10 +197,11 @@ const submitSelfEvaluation = async (req, res, next) => {
     await kpi.update({ status: 'PENDING_REVIEW' });
 
     // Notify the manager who assigned this KPI
-    await Notification.create({
-      userId: kpi.assignedBy,
-      message: `${kpi.Employee?.User?.name || 'An employee'} has submitted a self evaluation for KPI: ${kpi.title}`,
-    });
+    const managerUser = await User.findByPk(
+      kpi.assignedBy,
+      { attributes: ['id', 'name', 'email'] }
+    );
+    await notifySelfEvalSubmitted(kpi.Employee, kpi, managerUser);
 
     res.json({ message: 'Self evaluation submitted', evaluation });
   } catch (err) {
@@ -249,6 +250,7 @@ const submitManagerEvaluation = async (req, res, next) => {
     // Close the KPI
     await kpi.update({ status: 'CLOSED' });
 
+    await notifyManagerEvalDone(kpi.Employee, kpi);
 
     res.json({ message: 'KPI evaluated and closed', evaluation: kpi.evaluation });
   } catch (err) {

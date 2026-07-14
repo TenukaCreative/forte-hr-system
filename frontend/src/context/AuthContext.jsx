@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { loginWithAzure, logoutFromAzure } from '../auth/authService';
 
 const AuthContext = createContext(null);
@@ -39,6 +39,9 @@ export function AuthProvider({ children }) {
       return u.permissions || [];
     } catch { return []; }
   });
+  const [notifCount, setNotifCount] = useState(0);
+  const lastNotifIdRef = useRef(null);
+  const pollRef = useRef(null);
 
   // Keep permissions in sync with the user object once it loads/updates after login.
   useEffect(() => {
@@ -46,6 +49,38 @@ export function AuthProvider({ children }) {
       setPermissions(user.permissions);
     }
   }, [user]);
+
+  const fetchAndNotify = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/notifications?limit=5`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data || data.length === 0) return;
+      const unreadCount = data.filter((n) => !n.isRead).length;
+      setNotifCount(unreadCount);
+
+      const latest = data[0];
+      if (lastNotifIdRef.current === null) {
+        lastNotifIdRef.current = latest.id;
+        return;
+      }
+      if (latest.id === lastNotifIdRef.current) return;
+
+      lastNotifIdRef.current = latest.id;
+    } catch {
+      // polling errors are silent
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    fetchAndNotify();
+    pollRef.current = setInterval(fetchAndNotify, 5000);
+    return () => clearInterval(pollRef.current);
+  }, [token, fetchAndNotify]);
 
   // Whether the current user can access a feature by permission key.
   const hasPermission = (key) => {
@@ -98,7 +133,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ token, user, isAuthenticated: !!token, login, logout, resolvedRole: resolveRole(user?.designation), permissions, hasPermission, isProfileComplete, refreshUser }}>
+    <AuthContext.Provider value={{ token, user, isAuthenticated: !!token, login, logout, resolvedRole: resolveRole(user?.designation), permissions, hasPermission, isProfileComplete, refreshUser, notifCount, setNotifCount }}>
       {children}
     </AuthContext.Provider>
   );
