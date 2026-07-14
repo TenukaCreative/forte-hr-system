@@ -1,7 +1,7 @@
 const { Op } = require('sequelize');
 const { LeaveRequest, LeaveEntitlement, User } = require('../models');
 const resolveRole = require('../utils/resolveRole');
-const { sendEmail } = require('../services/emailService');
+const { notifyLeaveSubmitted, notifyManagerReviewed, notifyFinalReviewed, notifyLeaveCancelled } = require('../services/notificationService');
 
 // Parse a yyyy-mm-dd string as local midnight (not UTC midnight), so the
 // weekday is not shifted back a day in timezones ahead of UTC (e.g. Colombo).
@@ -153,6 +153,9 @@ const submitRequest = async (req, res, next) => {
     // Get reporting manager
     const employee = await User.findByPk(employeeId);
     const managerId = employee?.managerId || null;
+    const managerUser = managerId
+      ? await User.findByPk(managerId, { attributes: ['id', 'name', 'email'] })
+      : null;
 
     const request = await LeaveRequest.create({
       employeeId,
@@ -166,6 +169,8 @@ const submitRequest = async (req, res, next) => {
       managerStatus: 'PENDING',
       approverStatus: 'PENDING',
     });
+
+    await notifyLeaveSubmitted(employee, managerUser, request);
 
     res.status(201).json(request);
   } catch (err) {
@@ -233,6 +238,11 @@ const managerReview = async (req, res, next) => {
     }
 
     await request.update(updates);
+    const employeeUser = await User.findByPk(
+      request.employeeId,
+      { attributes: ['id', 'name', 'email'] }
+    );
+    await notifyManagerReviewed(employeeUser, request, status);
     res.json(request);
   } catch (err) {
     next(err);
@@ -295,6 +305,11 @@ const finalReview = async (req, res, next) => {
     }
 
     await request.update(updates);
+    const employeeUser = await User.findByPk(
+      request.employeeId,
+      { attributes: ['id', 'name', 'email'] }
+    );
+    await notifyFinalReviewed(employeeUser, request, status);
     res.json(request);
   } catch (err) {
     next(err);
@@ -458,29 +473,10 @@ const deleteLeaveRequest = async (req, res, next) => {
       });
     }
 
-    // Store details before deletion for notification
-    const employeeName = leaveRequest.employee.name;
-    const managerEmail = leaveRequest.manager?.email;
-    const leaveType = leaveRequest.leaveType;
-    const start = leaveRequest.startDate;
-    const end = leaveRequest.endDate;
-
     // Delete the record
     await leaveRequest.destroy();
 
-    // Send notification email to manager if manager exists. Follows the same
-    // emailService / MS Graph sendMail pattern used elsewhere in the project.
-    if (managerEmail) {
-      try {
-        await sendEmail({
-          subject: 'Leave Request Cancelled',
-          bodyHtml: `<p>${employeeName} has cancelled their ${leaveType} leave request from ${start} to ${end}.</p>`,
-        });
-      } catch (emailErr) {
-        console.error('Delete leave notification failed:', emailErr);
-        // Non-blocking — do not fail the request
-      }
-    }
+    await notifyLeaveCancelled(leaveRequest.employee, leaveRequest.manager, leaveRequest);
 
     return res.json({ message: 'Leave request deleted successfully' });
   } catch (err) {

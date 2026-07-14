@@ -7,13 +7,15 @@ const GRAPH = process.env.GRAPH_API_ENDPOINT || 'https://graph.microsoft.com/v1.
 // For testing, every email is sent FROM this mailbox and TO this address,
 // regardless of who triggered the action or who the real recipient is.
 const TEST_SENDER_EMAIL = 'hrstest1@forteinsurance.com'; // HARDCODED FOR TESTING
-const TEST_RECIPIENT_EMAIL = 'Tenuka@CreativeSoftware.com'; // HARDCODED FOR TESTING
 
 // Core send routine. Looks up the hardcoded test sender, uses their stored
-// MS Graph access token, and sends to the hardcoded test recipient.
-// Extra fields (e.g. senderId/toEmail from legacy callers) are ignored on
-// purpose — sender and recipient are always the hardcoded test values.
-const sendEmail = async ({ subject, bodyHtml }) => {
+// MS Graph access token, and sends to the provided toEmail recipient.
+const sendEmail = async ({ subject, bodyHtml, toEmail }) => {
+  if (!toEmail) {
+    console.warn('[emailService] No toEmail provided; skipping email.');
+    return;
+  }
+
   // 1. Look up the sender user from the DB by email.
   const sender = await User.findOne({
     where: { email: TEST_SENDER_EMAIL }, // HARDCODED FOR TESTING
@@ -38,8 +40,8 @@ const sendEmail = async ({ subject, bodyHtml }) => {
             content: bodyHtml,
           },
           toRecipients: [
-            // 3. Recipient is always the hardcoded test address.
-            { emailAddress: { address: TEST_RECIPIENT_EMAIL } }, // HARDCODED FOR TESTING
+            // 3. Recipient is the provided toEmail address.
+            { emailAddress: { address: toEmail } },
           ],
         },
         saveToSentItems: false,

@@ -1,17 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Bell } from 'lucide-react';
-import api from '../../api/axios';
 import NotificationPanel from '../NotificationPanel';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Topbar({ title }) {
-  const [unreadCount, setUnreadCount] = useState(0);
+  const { notifCount, setNotifCount } = useAuth();
   const [notifOpen, setNotifOpen] = useState(false);
-
-  useEffect(() => {
-    api.get('/notifications/me')
-      .then((r) => setUnreadCount((r.data || []).filter((n) => !n.isRead).length))
-      .catch(() => {});
-  }, []);
 
   return (
     <>
@@ -23,8 +17,8 @@ export default function Topbar({ title }) {
           onClick={() => setNotifOpen(true)}
         >
           <Bell size={20} />
-          {unreadCount > 0 && (
-            <span className="bell-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
+          {notifCount > 0 && (
+            <span className="bell-badge">{notifCount > 9 ? '9+' : notifCount}</span>
           )}
         </button>
       </div>
@@ -32,7 +26,7 @@ export default function Topbar({ title }) {
       <NotificationPanel
         isOpen={notifOpen}
         onClose={() => setNotifOpen(false)}
-        onUnreadCountChange={setUnreadCount}
+        onUnreadCountChange={setNotifCount}
       />
     </>
   );

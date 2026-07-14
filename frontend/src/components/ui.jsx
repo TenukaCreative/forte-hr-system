@@ -1,5 +1,6 @@
 // Shared presentational components for the performance / PMO modules.
 // Design tokens and helpers live in ./theme.js.
+import { X } from 'lucide-react';
 import { C, card, STATUS_BADGE, formatDate, etaColor } from './theme';
 
 // "01 Jun 2026 → 30 Jun 2026" with the end date (ETA) colour-coded.
@@ -106,5 +107,54 @@ export function Tabs({ tabs, active, onChange }) {
         ))}
       </div>
     </>
+  );
+}
+
+export function Toast({ notifications, onDismiss }) {
+  if (!notifications || notifications.length === 0) return null;
+  return (
+    <div style={{
+      position: 'fixed',
+      bottom: 24,
+      right: 24,
+      zIndex: 9999,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 10,
+      maxWidth: 340,
+    }}>
+      {notifications.map((n) => (
+        <div key={n.id} style={{
+          background: '#15161A',
+          color: '#fff',
+          borderRadius: 10,
+          padding: '14px 16px',
+          fontSize: 13,
+          fontWeight: 500,
+          boxShadow: '0 4px 24px rgba(21,22,26,0.18)',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 12,
+          fontFamily: 'inherit',
+          borderLeft: '3px solid #C8203D',
+        }}>
+          <span style={{ flex: 1, lineHeight: 1.5 }}>{n.message}</span>
+          <button
+            onClick={() => onDismiss(n.id)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'rgba(255,255,255,0.5)',
+              cursor: 'pointer',
+              padding: 0,
+              marginTop: 1,
+              flexShrink: 0,
+            }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      ))}
+    </div>
   );
 }
