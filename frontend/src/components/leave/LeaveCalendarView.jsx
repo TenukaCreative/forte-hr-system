@@ -1,26 +1,14 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { C, card, formatDate } from '../theme';
+import { C, card, formatDate, LEAVE_CALENDAR } from '../theme';
 import { Badge } from '../ui';
 import api from '../../api/axios';
-
-// Leave plans use a single distinct colour, separate from the leave-type colours.
-const PLAN_COLOR = '#305669';
 
 // Human-readable status text for the day tooltip.
 const STATUS_TEXT = {
   PENDING: 'Pending',
   MANAGER_APPROVED: 'Manager Approved',
   APPROVED: 'Approved',
-};
-
-// Apply an alpha to a 6-digit hex colour, returning an rgba() string.
-const withAlpha = (hex, alpha) => {
-  const h = hex.replace('#', '');
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -94,7 +82,7 @@ export default function LeaveCalendarView({
           <div key={d} style={{
             textAlign: 'center', fontSize: 11, fontWeight: 600,
             letterSpacing: '0.04em', textTransform: 'uppercase',
-            color: i >= 5 ? 'rgba(21,22,26,0.35)' : C.faint, padding: '4px 0',
+            color: i >= 5 ? C.muted : C.faint, padding: '4px 0',
           }}>
             {d}
           </div>
@@ -118,19 +106,19 @@ export default function LeaveCalendarView({
           const holiday = holidayMap[dateStr];
 
           // Background + text. A leave request takes priority over a plan.
-          let bg = isWeekend ? '#F9FAFB' : '#fff';
+          let bg = isWeekend ? LEAVE_CALENDAR.weekendBg : LEAVE_CALENDAR.defaultBg;
           let textColor = C.dark;
           if (leave) {
             if (leave.status === 'APPROVED') {
-              bg = '#16a34a';
-              textColor = '#ffffff';
+              bg = LEAVE_CALENDAR.approvedBg;
+              textColor = LEAVE_CALENDAR.approvedText;
             } else {
-              bg = withAlpha('#d97706', 0.5);
-              textColor = C.dark;
+              bg = LEAVE_CALENDAR.pendingBg;
+              textColor = LEAVE_CALENDAR.pendingText;
             }
           } else if (plan) {
-            bg = withAlpha('#305669', 0.6);
-            textColor = '#ffffff';
+            bg = LEAVE_CALENDAR.planBg;
+            textColor = LEAVE_CALENDAR.planText;
           }
           // A day with both a request and a plan shows the request colour plus a dot.
           const showPlanDot = !!(leave && plan);
@@ -159,7 +147,7 @@ export default function LeaveCalendarView({
                 color: textColor,
                 fontWeight: isToday ? 700 : (leave || plan ? 600 : 400),
                 textDecoration: isToday ? 'underline' : 'none',
-                border: isToday ? '1px solid #9CA3AF' : `1px solid ${C.border}`,
+                border: isToday ? `1px solid ${LEAVE_CALENDAR.todayBorder}` : `1px solid ${C.border}`,
               }}
             >
               {date.getDate()}
@@ -174,8 +162,8 @@ export default function LeaveCalendarView({
                   padding: '1px 4px',
                   fontSize: 9,
                   fontWeight: 600,
-                  background: 'rgba(200,32,61,0.10)',
-                  color: '#C8203D',
+                  background: LEAVE_CALENDAR.holidayBg,
+                  color: LEAVE_CALENDAR.holidayText,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
@@ -190,7 +178,7 @@ export default function LeaveCalendarView({
               {showPlanDot && (
                 <span style={{
                   position: 'absolute', bottom: 4, left: '50%', transform: 'translateX(-50%)',
-                  width: 5, height: 5, borderRadius: '50%', background: PLAN_COLOR,
+                  width: 5, height: 5, borderRadius: '50%', background: LEAVE_CALENDAR.planDot,
                 }} />
               )}
 
@@ -199,7 +187,7 @@ export default function LeaveCalendarView({
                   onClick={(e) => e.stopPropagation()}
                   style={{
                     position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 10,
-                    width: 220, background: '#fff', border: `1px solid ${C.border}`,
+                    width: 220, background: LEAVE_CALENDAR.defaultBg, border: `1px solid ${C.border}`,
                     borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', padding: 14,
                     textAlign: 'left', cursor: 'default',
                   }}
@@ -227,11 +215,11 @@ export default function LeaveCalendarView({
       {/* Legend */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 18 }}>
         {[
-          { label: 'Approved Leave', color: '#16a34a' },
-          { label: 'Pending Leave', color: withAlpha('#d97706', 0.5) },
-          { label: 'Planned Leave', color: '#305669' },
-          { label: 'Public Holiday', color: 'rgba(200,32,61,0.10)' },
-          { label: 'Today', color: '#9CA3AF' },
+          { label: 'Approved Leave', color: LEAVE_CALENDAR.approvedBg },
+          { label: 'Pending Leave', color: LEAVE_CALENDAR.pendingBg },
+          { label: 'Planned Leave', color: LEAVE_CALENDAR.planDot },
+          { label: 'Public Holiday', color: LEAVE_CALENDAR.holidayBg },
+          { label: 'Today', color: LEAVE_CALENDAR.todayBorder },
         ].map((l) => (
           <span key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: C.muted }}>
             <span style={{ width: 10, height: 10, borderRadius: '50%', background: l.color, border: `1px solid ${C.border}` }} />
