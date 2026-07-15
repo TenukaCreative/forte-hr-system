@@ -147,3 +147,19 @@ export const LEAVE_TYPE_LABELS = {
   SPECIAL:         'Special Leave',
   OTHER:           'Other',
 };
+
+// Leave calendar cell colours — single source of truth for LeaveCalendarView
+export const LEAVE_CALENDAR = {
+  approvedBg:   '#0070C0',                   // blue
+  approvedText: '#ffffff',
+  pendingBg:    withAlpha(C.green, 0.5),     // green with alpha
+  pendingText:  C.dark,
+  planBg:       withAlpha('#BFC6C4', 0.6),   // purple with alpha
+  planText:     '#ffffff',
+  planDot:      '#BFC6C4',                   // purple dot
+  holidayBg:    withAlpha(C.accent, 0.10),   // red tint (unchanged)
+  holidayText:  C.accent,
+  weekendBg:    '#F9FAFB',
+  defaultBg:    '#ffffff',
+  todayBorder:  C.accent,                    // red
+};
