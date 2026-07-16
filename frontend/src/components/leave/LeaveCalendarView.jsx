@@ -50,7 +50,7 @@ export default function LeaveCalendarView({
   const todayStr = ymd(new Date());
 
   useEffect(() => {
-    api.get(`/holidays?year=${year}`)
+    api.get('/calendar/shared')
       .then((r) => setHolidays(r.data || []))
       .catch(() => {});
   }, [year]);
