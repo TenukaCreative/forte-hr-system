@@ -15,8 +15,8 @@ const CATEGORIES = [
   {
     key: 'hr_admin',
     label: 'HR Admin',
-    subtext: 'Employee Management, Leave Overview, Holiday Management',
-    keys: ['employee_management', 'leave_overview', 'manage_holidays'],
+    subtext: 'Employee Management, Leave Overview ',
+    keys: ['employee_management', 'leave_overview'],
   },
   {
     key: 'team',

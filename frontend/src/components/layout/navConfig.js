@@ -8,7 +8,6 @@ import {
   ClipboardList,
   CheckSquare,
   ShieldCheck,
-  CalendarCheck,
 } from 'lucide-react';
 
 // Single master nav list. The sidebar / bottom nav render every item the user
@@ -29,7 +28,6 @@ export const MASTER_NAV = [
     items: [
       { icon: Users2,        label: 'Employee Management', path: '/employees', permission: 'employee_management' },
       { icon: ClipboardList, label: 'Leave Overview',      path: '/leave-overview', permission: 'leave_overview' },
-      { icon: CalendarCheck, label: 'Holiday Management',   path: '/holidays', permission: 'manage_holidays' },
       { icon: ShieldCheck,   label: 'Role Management',      path: '/role-management', permission: 'role_management' },
     ],
   },
