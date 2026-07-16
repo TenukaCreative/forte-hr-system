@@ -48,8 +48,18 @@ const { hasPermission } = useAuth();
     // still renders leaves if the user hasn't granted calendar access.
     const fetchOutlookEvents = async () => {
       try {
-        const account = msalInstance.getActiveAccount();
-        if (!account) return;
+        // Wait for MSAL to finish restoring state from cache
+        await msalInstance.initialize();
+        await msalInstance.handleRedirectPromise();
+
+        const accounts = msalInstance.getAllAccounts();
+        console.log('MSAL accounts found:', accounts.length);
+        console.log('Account details:', accounts[0]?.username);
+        if (!accounts.length) return;
+
+        const account = accounts[0];
+        msalInstance.setActiveAccount(account);
+
         let msToken;
         try {
           const tokenResponse = await msalInstance.acquireTokenSilent({
@@ -58,12 +68,10 @@ const { hasPermission } = useAuth();
           });
           msToken = tokenResponse.accessToken;
         } catch {
-          await msalInstance.acquireTokenRedirect({
-            ...loginRequest,
-            account,
-          });
+          // fail silently — don't redirect, just skip outlook events
           return;
         }
+
         const r = await api.get('/calendar/outlook', {
           headers: { 'x-ms-token': msToken },
         });
