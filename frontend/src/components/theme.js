@@ -154,7 +154,7 @@ export const LEAVE_CALENDAR = {
   approvedText: '#ffffff',
   pendingBg:    withAlpha(C.green, 0.5),     // green with alpha
   pendingText:  C.dark,
-  planBg:       withAlpha('#BFC6C4', 0.6),   // purple with alpha
+  planBg:       withAlpha('#12c94f', 0.6),   // purple with alpha
   planText:     '#ffffff',
   planDot:      '#BFC6C4',                   // purple dot
   holidayBg:    withAlpha(C.accent, 0.10),   // red tint (unchanged)

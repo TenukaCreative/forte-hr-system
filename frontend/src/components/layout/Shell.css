@@ -67,21 +67,28 @@
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 10px 20px;
+  padding: 10px 20px 10px 17px;
   color: rgba(255,255,255,0.65);
   text-decoration: none;
   font-size: 14px;
   font-weight: 400;
-  transition: background 0.15s, color 0.15s;
   border-left: 3px solid transparent;
   cursor: pointer;
+  border-radius: 0 8px 8px 0;
+  margin-right: 10px;
+  transform: translateX(0);
+  transition: background 0.15s, color 0.15s, transform 0.2s ease;
 }
 .nav-item:hover { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.9); }
 .nav-item.active {
   border-left-color: #C8203D;
-  background: rgba(200,32,61,0.08);
+  background: rgba(200,32,61,0.10);
   color: #fff;
   font-weight: 500;
+  transform: translateX(4px);
+}
+.nav-item.active svg {
+  color: #C8203D;
 }
 
 /* ── Sidebar user section ── */
