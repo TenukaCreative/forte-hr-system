@@ -30,10 +30,7 @@ const getAppToken = async () => {
 
 const getSharedCalendarEvents = async () => {
   try {
-    const token = await getAppToken();
-     console.log('App token:', token ? 'RECEIVED' : 'NULL - check env vars');
-    if (!token) return [];
-
+    
     const now = new Date();
     const startDateTime = new Date(now.getFullYear(), 0, 1).toISOString();
     const endDateTime = new Date(now.getFullYear(), 11, 31, 23, 59, 59).toISOString();
