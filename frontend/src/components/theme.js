@@ -160,6 +160,8 @@ export const LEAVE_CALENDAR = {
   holidayBg:    withAlpha(C.accent, 0.10),   // red tint (unchanged)
   holidayText:  C.accent,
   weekendBg:    '#F9FAFB',
+  rejectedBg:   withAlpha(C.red, 0.12),  // light red tint
+  rejectedText: C.red,      
   defaultBg:    '#ffffff',
   todayBorder:  C.accent,                    // red
 };
