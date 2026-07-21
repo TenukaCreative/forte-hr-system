@@ -9,6 +9,7 @@ const STATUS_TEXT = {
   PENDING: 'Pending',
   MANAGER_APPROVED: 'Manager Approved',
   APPROVED: 'Approved',
+  REJECTED: 'Rejected',
 };
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -51,8 +52,14 @@ export default function LeaveCalendarView({
 
   useEffect(() => {
     api.get('/calendar/shared')
-      .then((r) => setHolidays(r.data || []))
-      .catch(() => {});
+      .then((r) => {
+        const events = Array.isArray(r.data) ? r.data : (r.data?.value || []);
+        setHolidays(events);
+      })
+      .catch((err) => {
+        console.error('[LeaveCalendar] Failed to fetch shared calendar:', err?.response?.status, err?.response?.data || err?.message);
+        setHolidays([]);
+      });
   }, [year]);
 
   const days = getDaysInMonth(year, month);
@@ -61,8 +68,20 @@ export default function LeaveCalendarView({
   const leading = Array.from({ length: firstWeekday }, () => null);
   const cells = [...leading, ...days];
 
+  // Outlook events (from the shared mailbox) keyed by YYYY-MM-DD. A single day
+  // may carry more than one holiday, so each key holds an array of subjects.
   const holidayMap = {};
-  holidays.forEach((h) => { holidayMap[h.date] = h; });
+  holidays.forEach((event) => {
+    // Backend returns start as a flat string (already extracted from Graph's start.dateTime)
+    const raw = typeof event.start === 'string'
+      ? event.start
+      : (event.start?.dateTime || event.start?.date);
+    if (!raw) return;
+    const key = raw.slice(0, 10); // "YYYY-MM-DD"
+    if (!holidayMap[key]) holidayMap[key] = [];
+    // Backend renames subject → title
+    holidayMap[key].push(event.title || event.subject || 'Holiday');
+  });
 
   const prev = () => { setOpenDay(null); setViewDate(new Date(year, month - 1, 1)); };
   const next = () => { setOpenDay(null); setViewDate(new Date(year, month + 1, 1)); };
@@ -100,10 +119,10 @@ export default function LeaveCalendarView({
           const isToday = dateStr === todayStr;
           // Rejected requests are ignored on the calendar (not highlighted).
           const leave = requests.find(
-            (r) => r.status !== 'REJECTED' && isLeaveOnDate(r, date)
+            (r) => isLeaveOnDate(r, date)
           ) || null;
           const plan = plans.find((p) => isLeaveOnDate(p, date)) || null;
-          const holiday = holidayMap[dateStr];
+          const dayHolidays = holidayMap[dateStr] || [];
 
           // Background + text. A leave request takes priority over a plan.
           let bg = isWeekend ? LEAVE_CALENDAR.weekendBg : LEAVE_CALENDAR.defaultBg;
@@ -112,6 +131,9 @@ export default function LeaveCalendarView({
             if (leave.status === 'APPROVED') {
               bg = LEAVE_CALENDAR.approvedBg;
               textColor = LEAVE_CALENDAR.approvedText;
+            } else if (leave.status === 'REJECTED') {
+              bg = LEAVE_CALENDAR.rejectedBg;
+              textColor = LEAVE_CALENDAR.rejectedText;
             } else {
               bg = LEAVE_CALENDAR.pendingBg;
               textColor = LEAVE_CALENDAR.pendingText;
@@ -152,10 +174,10 @@ export default function LeaveCalendarView({
             >
               {date.getDate()}
 
-              {holiday && (
-                <div style={{
+              {dayHolidays.map((name, hi) => (
+                <div key={hi} style={{
                   position: 'absolute',
-                  bottom: 4,
+                  bottom: 4 + hi * 14,
                   left: 2,
                   right: 2,
                   borderRadius: 3,
@@ -169,11 +191,11 @@ export default function LeaveCalendarView({
                   whiteSpace: 'nowrap',
                   textAlign: 'center',
                 }}
-                  title={holiday.name}
+                  title={name}
                 >
-                  🇰🇭 {holiday.name}
+                  🇰🇭 {name}
                 </div>
-              )}
+              ))}
 
               {showPlanDot && (
                 <span style={{
@@ -217,6 +239,7 @@ export default function LeaveCalendarView({
         {[
           { label: 'Approved Leave', color: LEAVE_CALENDAR.approvedBg },
           { label: 'Pending Leave', color: LEAVE_CALENDAR.pendingBg },
+          { label: 'Rejected Leave', color: LEAVE_CALENDAR.rejectedBg },
           { label: 'Planned Leave', color: LEAVE_CALENDAR.planDot },
           { label: 'Public Holiday', color: LEAVE_CALENDAR.holidayBg },
           { label: 'Today', color: LEAVE_CALENDAR.todayBorder },
